@@ -20619,6 +20619,132 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     };
   }
 
+  // src/lib/aviation.ts
+  var aircraftStatuses = [
+    "Latihan di pangkalan",
+    "Latihan bergerak",
+    "Latihan di lokasi",
+    "Latihan selesai",
+    "Perlu konfirmasi"
+  ];
+  var reportCategories = [
+    "Posisi",
+    "Koordinasi",
+    "Kendala",
+    "Laporan akhir"
+  ];
+  var optionalCoordinate = (min, max) => external_exports.union([
+    external_exports.literal(""),
+    external_exports.union([external_exports.number(), external_exports.string().trim().min(1)]).transform(Number).pipe(external_exports.number().min(min).max(max))
+  ]);
+  var aircraftReportSchema = external_exports.object({
+    aircraftId: external_exports.uuid(),
+    missionId: external_exports.union([external_exports.literal(""), external_exports.uuid()]).default(""),
+    category: external_exports.enum(reportCategories),
+    text: external_exports.string().trim().min(3).max(1e3),
+    aircraftStatus: external_exports.enum(aircraftStatuses),
+    lat: optionalCoordinate(-90, 90).default(""),
+    lng: optionalCoordinate(-180, 180).default("")
+  }).refine((p) => p.lat === "" === (p.lng === ""), {
+    message: "Koordinat harus berpasangan"
+  });
+  function seedAircraft(record3) {
+    const paths = [
+      [
+        [-6.24, 106.87],
+        [-6.235, 106.88],
+        [-6.23, 106.895],
+        [-6.22, 106.905]
+      ],
+      [
+        [-6.28, 106.9],
+        [-6.27, 106.89],
+        [-6.26, 106.875],
+        [-6.25, 106.86]
+      ]
+    ];
+    const aircraft = paths.map(
+      (path, index) => record3({
+        name: "Helikopter Simulasi " + String(index + 1).padStart(2, "0"),
+        demoCode: "SIM-HELI-" + String(index + 1).padStart(2, "0"),
+        lat: path[0][0],
+        lng: path[0][1],
+        status: "Latihan di pangkalan",
+        trainingPath: path,
+        missionId: "",
+        positionReportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        isSynthetic: true
+      })
+    );
+    const reports = aircraft.map(
+      (a) => record3({
+        aircraftId: a.id,
+        missionId: "",
+        category: "Koordinasi",
+        text: "Briefing awak sintetis dicatat untuk latihan koordinasi. Bukan laporan penerbangan nyata.",
+        lat: a.lat,
+        lng: a.lng,
+        aircraftStatus: a.status,
+        reportedAt: a.updatedAt,
+        aircraftRevision: a.revision,
+        isSynthetic: true,
+        status: "Dicatat",
+        positionSupplied: true
+      })
+    );
+    return { aircraft, reports };
+  }
+  var coordinate2 = (lat, lng) => typeof lat === "number" && typeof lng === "number" && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  var iso = (value) => Number.isFinite(Date.parse(String(value))) ? new Date(String(value)).toISOString() : "";
+  function aviationSnapshot(tables2) {
+    const aircraft = (tables2.Aircraft ?? []).filter((a) => a.isSynthetic === true && coordinate2(a.lat, a.lng)).map((a) => ({
+      id: a.id,
+      name: String(a.name).slice(0, 150),
+      demoCode: String(a.demoCode ?? "SIMULASI").slice(0, 50),
+      lat: Number(a.lat),
+      lng: Number(a.lng),
+      status: aircraftStatuses.includes(
+        a.status
+      ) ? a.status : "Perlu konfirmasi",
+      revision: a.revision,
+      updatedAt: iso(a.updatedAt),
+      positionReportedAt: iso(a.positionReportedAt ?? a.createdAt),
+      missionId: String(a.missionId ?? ""),
+      trainingPath: Array.isArray(a.trainingPath) ? a.trainingPath.filter((p) => Array.isArray(p) && coordinate2(p[0], p[1])).slice(0, 50) : [],
+      isSynthetic: true
+    }));
+    const ids = new Set(aircraft.map((a) => a.id));
+    const reports = (tables2.AircraftReports ?? []).filter(
+      (r) => r.isSynthetic === true && ids.has(String(r.aircraftId)) && coordinate2(r.lat, r.lng)
+    ).map((r) => ({
+      id: r.id,
+      aircraftId: String(r.aircraftId),
+      missionId: String(r.missionId ?? ""),
+      category: reportCategories.includes(
+        r.category
+      ) ? String(r.category) : "Koordinasi",
+      text: String(r.text ?? "").slice(0, 1e3),
+      lat: Number(r.lat),
+      lng: Number(r.lng),
+      aircraftStatus: aircraftStatuses.includes(
+        r.aircraftStatus
+      ) ? String(r.aircraftStatus) : "Perlu konfirmasi",
+      reportedAt: iso(r.reportedAt),
+      aircraftRevision: Number(r.aircraftRevision ?? 1),
+      positionSupplied: r.positionSupplied === true,
+      isSynthetic: true
+    })).sort((a, b) => b.reportedAt.localeCompare(a.reportedAt));
+    return {
+      aircraft,
+      reports,
+      missions: (tables2.Missions ?? []).map((m) => ({
+        id: m.id,
+        status: m.status
+      })),
+      generatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+
   // src/services/demo.ts
   var record2 = (data) => ({
     id: crypto.randomUUID(),
@@ -20631,6 +20757,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     ...data
   });
   function seed() {
+    const aviation = seedAircraft(record2);
     return {
       processed: {},
       tables: {
@@ -20667,7 +20794,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
           }),
           record2({ name: "Klinik Simulasi Utara", lat: -6.28, lng: 106.9 })
         ],
-        ActivityLogs: []
+        ActivityLogs: [],
+        Aircraft: aviation.aircraft,
+        AircraftReports: aviation.reports
       }
     };
   }
@@ -20679,7 +20808,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     flightReviews: ["Koordinator penerbangan"],
     patientNotes: ["Dokter/perawat"],
     checklists: ["Dokter/perawat", "Koordinator penerbangan"],
-    handovers: ["Rumah sakit penerima", "Dokter/perawat"]
+    handovers: ["Rumah sakit penerima", "Dokter/perawat"],
+    aircraftReports: ["Koordinator penerbangan", "Dokter/perawat"]
   };
   var tables = {
     requests: "Requests",
@@ -20691,7 +20821,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     facilities: "Facilities",
     resources: "Resources",
     handovers: "HandoverRecords",
-    activity: "ActivityLogs"
+    activity: "ActivityLogs",
+    aircraft: "Aircraft",
+    aircraftReports: "AircraftReports"
   };
   function parseRequest(data) {
     const parsed = requestSchema.safeParse(data);
@@ -20718,6 +20850,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       throw Error(
         "FORBIDDEN: Gunakan ringkasan pengawasan pimpinan; data operasional rinci dibatasi"
       );
+    if (action === "aircraft.snapshot") return aviationSnapshot(s.tables);
     if (verb === "list" || verb === "get") {
       if (!table) throw Error("ACTION: Action tidak tersedia");
       let rows = s.tables[table];
@@ -20786,7 +20919,48 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     if (row && p.baseRevision !== row.revision)
       throw Error("CONFLICT: Revision berubah; muat ulang dan tinjau");
-    if (action === "requests.create") {
+    if (action === "aircraftReports.create") {
+      if (row) throw Error("CONFLICT: ID laporan telah digunakan");
+      const parsed = aircraftReportSchema.safeParse(p.data);
+      if (!parsed.success)
+        throw Error(
+          "VALIDATION: Laporan awak tidak valid; periksa helikopter, catatan dan pasangan koordinat"
+        );
+      const data = parsed.data;
+      const aircraft = s.tables.Aircraft.find(
+        (a) => a.id === data.aircraftId && a.isSynthetic === true
+      );
+      if (!aircraft)
+        throw Error("NOT_FOUND: Helikopter sintetis tidak ditemukan");
+      if (p.baseRevision !== aircraft.revision)
+        throw Error(
+          "CONFLICT: Posisi/laporan helikopter berubah; muat versi terbaru"
+        );
+      if (data.missionId && !s.tables.Missions.some((m) => m.id === data.missionId))
+        throw Error("VALIDATION: Referensi misi tidak ditemukan");
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      if (data.lat !== "") aircraft.positionReportedAt = now;
+      aircraft.lat = data.lat === "" ? aircraft.lat : data.lat;
+      aircraft.lng = data.lng === "" ? aircraft.lng : data.lng;
+      aircraft.status = data.aircraftStatus;
+      aircraft.missionId = data.missionId;
+      aircraft.updatedAt = now;
+      aircraft.updatedBy = owner;
+      aircraft.revision++;
+      row = record2({
+        ...data,
+        id: p.id ?? crypto.randomUUID(),
+        lat: aircraft.lat,
+        lng: aircraft.lng,
+        reportedAt: now,
+        aircraftRevision: aircraft.revision,
+        positionSupplied: data.lat !== "",
+        status: "Dicatat",
+        createdBy: owner,
+        isSynthetic: true
+      });
+      s.tables.AircraftReports.push(row);
+    } else if (action === "requests.create") {
       if (row) throw Error("CONFLICT: ID sudah digunakan");
       const data = parseRequest(p.data);
       row = record2({

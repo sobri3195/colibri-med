@@ -14,7 +14,13 @@ import {
 } from "../services/storage";
 import { date } from "../lib/domain";
 import { errorCode } from "../lib/errors";
-export function Home() {
+export function Home({
+  actor = null,
+  onDemoAdmin,
+}: {
+  actor?: Actor | null;
+  onDemoAdmin?: () => void;
+}) {
   return (
     <>
       <section className="hero">
@@ -45,6 +51,37 @@ export function Home() {
         </div>
         <div className="hero-icon">
           <Plane size={160} strokeWidth={1} />
+        </div>
+      </section>
+      <section className="card index-admin">
+        <div>
+          <span className="eyebrow">AKSES ADMINISTRATOR</span>
+          <h2>Pantau helikopter dan laporan awak</h2>
+          <p>
+            Buka pusat pantau sintetis untuk melihat posisi laporan, memutar
+            simulasi pergerakan, dan membaca laporan operasional per helikopter.
+          </p>
+          <small>
+            {mode === "demo"
+              ? "Akun: Administrator Demo · latihan lokal tanpa password. Bukan autentikasi layanan nyata."
+              : "Gunakan akun undangan Administrator. Akses demo tidak tersedia dalam mode connected."}
+          </small>
+        </div>
+        <div className="index-admin-actions">
+          {actor?.role === "Administrator" ? (
+            <Link className="button" to="/admin">
+              Buka dashboard admin <ArrowRight size={17} />
+            </Link>
+          ) : mode === "demo" ? (
+            <button onClick={onDemoAdmin} disabled={!onDemoAdmin}>
+              Masuk admin demo <ArrowRight size={17} />
+            </button>
+          ) : (
+            <Link className="button" to="/admin/login">
+              Login admin <ArrowRight size={17} />
+            </Link>
+          )}
+          <Link to="/admin/laporan">Lihat laporan helikopter</Link>
         </div>
       </section>
       <div className="grid three">

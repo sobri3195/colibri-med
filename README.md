@@ -69,3 +69,13 @@ Permohonan menyediakan draft, pengiriman offline, kirim ulang, serta bukti penca
 Checklist memiliki lima butir koordinasi sintetis yang dapat dicentang dan disimpan dengan revision. Penugasan tim dapat diubah sebelum keberangkatan dengan alasan. Administrator dapat menambah/memperbarui fasilitas dan sumber daya; Operator tetap hanya memperbarui kesiapan. Menonaktifkan direktori memakai status, tanpa menghapus riwayat. Pengaturan polling tersimpan per mode dan pengguna pada perangkat.
 
 Lihat [panduan uji semua menu mobile](docs/MOBILE-WORKFLOW.md) untuk alur dari permohonan hingga laporan. Semua fungsi diverifikasi dalam demo dan adapter Apps Script mock; koneksi Google Sheets/Vercel nyata memerlukan konfigurasi deployment dan belum diklaim berhasil.
+
+## Login admin di index dan laporan helikopter
+
+Halaman `/` (termasuk `/index` dan `/index.html`) menampilkan kartu **Akses Administrator**. Dalam mode demo, klik **Masuk admin demo** untuk masuk sebagai **Administrator Demo** tanpa password dan membuka `/admin`. Ini akun latihan lokal, bukan autentikasi connected. Di mode connected hanya tersedia login dengan akun undangan administrator.
+
+Dashboard menyediakan dua helikopter sintetis dan contoh laporan awak. Tombol **Mulai simulasi pergerakan**, **Jeda simulasi**, dan **Reset ke posisi laporan** hanya mengubah ilustrasi di browser; tidak mengirim posisi, mengubah misi, atau memberi persetujuan terbang. Posisi laporan tersimpan dan waktu pengamatannya ditampilkan terpisah dari playback.
+
+Tab **Laporan awak** menampilkan riwayat per helikopter, pencarian/filter, dan CSV sintetis. Administrator, Koordinator penerbangan, dan Dokter/perawat dapat mencatat laporan operasional nonklinis, dengan koordinat opsional dan referensi misi. Laporan tanpa koordinat baru tidak memperbarui umur posisi. Pengiriman memakai revision helikopter dan operationId; offline/retry tetap melalui Outbox. Petugas lain dapat memantau lewat Akun → Pemantauan helikopter pada `/mobile`. Viewer pimpinan tetap hanya mendapat agregat.
+
+Data lama demo dimigrasikan secara aditif. Untuk connected, perbarui source Apps Script lalu jalankan `setupSheets` dan `seedSyntheticData` untuk tabel tambahan **Aircraft** dan **AircraftReports**, tanpa menghapus data sebelumnya. Tidak ada GPS/ADS-B/sensor/komunikasi helikopter nyata yang diintegrasikan. Seluruh posisi, kode unit dan laporan adalah sintetis.

@@ -14,6 +14,8 @@ var TABLES = [
   "ActivityLogs",
   "Settings",
   "ProcessedOperations",
+  "Aircraft",
+  "AircraftReports",
 ];
 var HEADERS = [
   "id",
