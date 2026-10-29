@@ -1,4 +1,12 @@
 function service_(actor, action, p) {
+  if (
+    actor &&
+    actor.role === "Viewer pimpinan" &&
+    action !== "leadership.summary"
+  )
+    throw Error(
+      "FORBIDDEN: Gunakan ringkasan pengawasan pimpinan; data operasional rinci dibatasi",
+    );
   var group = action.split(".")[0];
   var tables = {
     requests: "Requests",
@@ -14,28 +22,39 @@ function service_(actor, action, p) {
   };
   var mutation = !/\.(list|get|summary)$/.test(action);
   var names =
-    action === "reports.summary"
-      ? TABLES.filter(function (n) {
-          return (
-            ["Users", "Sessions", "Settings", "ProcessedOperations"].indexOf(
-              n,
-            ) < 0
-          );
-        })
-      : mutation
-        ? [
-            "Requests",
-            "Missions",
-            "MedicalReviews",
-            "FlightReviews",
-            "PatientNotes",
-            "Checklists",
-            "HandoverRecords",
-            "MissionAssignments",
-            "ActivityLogs",
-            "Resources",
-          ]
-        : [tables[group]];
+    action === "leadership.summary"
+      ? [
+          "Requests",
+          "Missions",
+          "MedicalReviews",
+          "FlightReviews",
+          "HandoverRecords",
+          "Resources",
+          "Facilities",
+          "ActivityLogs",
+        ]
+      : action === "reports.summary"
+        ? TABLES.filter(function (n) {
+            return (
+              ["Users", "Sessions", "Settings", "ProcessedOperations"].indexOf(
+                n,
+              ) < 0
+            );
+          })
+        : mutation
+          ? [
+              "Requests",
+              "Missions",
+              "MedicalReviews",
+              "FlightReviews",
+              "PatientNotes",
+              "Checklists",
+              "HandoverRecords",
+              "MissionAssignments",
+              "ActivityLogs",
+              "Resources",
+            ]
+          : [tables[group]];
   if (
     action === "reports.summary" &&
     ["Dokter/perawat", "Koordinator medis", "Administrator"].indexOf(

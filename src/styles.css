@@ -492,6 +492,418 @@ a:focus-visible {
   min-width: 0;
 }
 
+.leadership-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 24px;
+}
+.leadership-heading .eyebrow {
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  margin-bottom: 8px;
+}
+.leadership-heading h1 {
+  font-size: 28px;
+  margin: 0;
+  max-width: 300px;
+}
+.leadership-heading > button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  flex-shrink: 0;
+}
+.leadership-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.leadership-filters label {
+  font-size: 11px;
+  color: #61768a;
+}
+.leadership-app .leadership-filters select {
+  font-size: 16px;
+  padding: 10px;
+  min-height: 44px;
+}
+.leadership-scope {
+  display: block;
+  font-size: 11px;
+  color: #667e90;
+  line-height: 1.7;
+  margin-bottom: 18px;
+}
+.leadership-freshness {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 18px;
+}
+.leadership-freshness .badge,
+.leadership-intro .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.leadership-freshness > small {
+  font-size: 10px;
+}
+.leadership-hero {
+  background: #132d46;
+  color: #fff;
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 18px;
+}
+.leadership-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 25px;
+}
+.leadership-hero-top > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9bded5;
+  font-size: 13px;
+  font-weight: 650;
+}
+.leadership-hero-top > span:last-child {
+  font-size: 9px;
+  letter-spacing: 1.3px;
+  border: 1px solid #456074;
+  color: #cfdee8;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+.leadership-hero h2 {
+  font-size: 25px;
+  line-height: 1.3;
+  max-width: 330px;
+  letter-spacing: -0.4px;
+}
+.leadership-hero p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #c1d2df;
+  margin-bottom: 20px;
+}
+.leadership-hero-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #3a5267;
+  padding-top: 12px;
+  gap: 10px;
+}
+.leadership-hero-foot > span {
+  font-size: 11px;
+  color: #d6e0e8;
+}
+.leadership-hero-foot > a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #9bded5;
+  min-height: 44px;
+}
+.leadership-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.leadership-metrics > .card {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 18px;
+}
+.leadership-metrics svg {
+  color: #087f83;
+  margin-bottom: 14px;
+}
+.leadership-metrics strong {
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -1px;
+  margin-bottom: 8px;
+}
+.leadership-metrics span {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #6b7e90;
+}
+.leadership-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.leadership-section-title h2 {
+  font-size: 17px;
+  margin: 0;
+  line-height: 1.5;
+}
+.leadership-section-title > svg {
+  flex-shrink: 0;
+  color: #087f83;
+}
+.leadership-content > .card > h2,
+.leadership-distribution h2,
+.leadership-coordination h2 {
+  font-size: 18px;
+}
+.leadership-bars {
+  display: grid;
+  gap: 3px;
+  height: 125px;
+  align-items: end;
+  padding-top: 8px;
+  border-bottom: 1px solid #e3eaf1;
+}
+.leadership-bar-slot {
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+}
+.leadership-bar-slot > span:first-child {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: #e0e8ef;
+}
+.leadership-bar-slot > span.has-value {
+  background: #319b9a;
+}
+.leadership-trend figure {
+  margin: 16px 0;
+}
+.leadership-trend figcaption {
+  display: flex;
+  justify-content: space-between;
+  color: #7a8d9d;
+  font-size: 10px;
+  margin-top: 10px;
+}
+.leadership-trend > small {
+  font-size: 10px;
+  line-height: 1.7;
+  display: block;
+}
+.leadership-trend label {
+  font-size: 11px;
+}
+.leadership-app .leadership-trend select {
+  font-size: 14px;
+}
+.leadership-app .leadership-table {
+  min-width: 0;
+  font-size: 11px;
+}
+.leadership-coordination > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 13px 0;
+  border-bottom: 1px solid #e9eef3;
+  font-size: 12px;
+}
+.leadership-coordination > div strong {
+  font-size: 20px;
+}
+.leadership-coordination > a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #087f83;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 17px 0 0;
+  min-height: 44px;
+}
+.leadership-totals {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: #e8f1f3;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+.leadership-totals > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  flex: 1;
+  color: #60758a;
+}
+.leadership-totals strong {
+  font-size: 28px;
+  color: #1b4158;
+  line-height: 1.2;
+}
+.leadership-status-row {
+  margin: 18px 0;
+}
+.leadership-status-row > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+.leadership-status-row strong {
+  font-size: 14px;
+}
+.leadership-track {
+  background: #edf2f6;
+  height: 6px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.leadership-track > span {
+  display: block;
+  background: #3d9e9a;
+  height: 100%;
+  border-radius: 4px;
+}
+.leadership-duration {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e7edf3;
+  padding: 14px 0;
+  font-size: 11px;
+}
+.leadership-duration > span {
+  color: #677c8e;
+  text-align: right;
+}
+.leadership-readiness > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #e7edf3;
+  font-size: 12px;
+}
+.leadership-readiness strong {
+  font-size: 24px;
+}
+.leadership-readiness {
+  margin-bottom: 16px;
+}
+.leadership-attention {
+  border-left: 3px solid #d6a14e;
+}
+.leadership-attention .leadership-section-title > strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  min-height: 38px;
+  background: #fff3dd;
+  color: #876227;
+  border-radius: 9px;
+  font-size: 22px;
+}
+.leadership-attention .badge {
+  font-size: 10px;
+  margin-bottom: 12px;
+  background: #eef2f6;
+  color: #5d7285;
+}
+.leadership-attention p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #6b7e90;
+  margin-bottom: 0;
+}
+.leadership-quality {
+  padding-left: 17px;
+  list-style: disc;
+  color: #6b7e90;
+  font-size: 12px;
+  line-height: 2;
+}
+.leadership-report-meta {
+  font-size: 12px;
+  margin: 22px 0;
+}
+.leadership-report-meta dt {
+  color: #718599;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 15px;
+}
+.leadership-report-meta dd {
+  margin: 5px 0 0;
+  font-weight: 600;
+}
+.leadership-report-meta + small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.leadership-intro {
+  padding: 14px 4px 20px;
+}
+.leadership-intro h1 {
+  font-size: 29px;
+}
+.leadership-intro p {
+  font-size: 13px;
+  color: #6b7e90;
+  line-height: 1.8;
+}
+.leadership-content .login > p {
+  font-size: 12px;
+}
+.leadership-content .login h1 {
+  font-size: 24px;
+}
+.leadership-content .card > p {
+  font-size: 13px;
+  line-height: 1.8;
+}
+.leadership-navigation .bottom-link {
+  font-size: 10px;
+}
+@media (max-width: 359px) {
+  .leadership-navigation .bottom-link {
+    font-size: 9px;
+  }
+  .leadership-heading h1 {
+    font-size: 25px;
+  }
+  .leadership-hero {
+    padding: 20px;
+  }
+  .leadership-hero h2 {
+    font-size: 23px;
+  }
+  .leadership-app .leadership-filters select {
+    font-size: 16px;
+  }
+}
+
 .mobile-app {
   min-height: 100dvh;
   background: #f3f7fb;

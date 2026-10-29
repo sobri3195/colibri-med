@@ -120,6 +120,31 @@ function runtime() {
   };
 }
 describe("actual Apps Script dispatcher against in-memory Sheets", () => {
+  it("serves leadership aggregates without reading clinical sheets or exposing raw records", () => {
+    const r = runtime();
+    const token = "d".repeat(64);
+    r.run(
+      `write_('Users',[base_({id:'leader',name:'Viewer contoh',role:'Viewer pimpinan'})]);write_('Sessions',[base_({userId:'leader',tokenHash:digest_('${token}'),expiresAt:new Date(Date.now()+600000).toISOString()})]);write_('Requests',[base_({id:'private-request',name:'PRIVATE-NAME',summary:'PRIVATE-CLINICAL',contact:'PRIVATE-CONTACT',patients:2,status:'Tercatat di Server'})]);`,
+    );
+    r.sheets
+      .get("PatientNotes")!
+      .push(["corrupt", "", "", "", "", 1, "", "not-json"]);
+    const result = r.post(
+      "leadership.summary",
+      { period: "7" },
+      { sessionToken: token },
+    );
+    expect(result.ok).toBe(true);
+    expect(result.data.totals.requests).toBe(1);
+    expect(JSON.stringify(result)).not.toContain("PRIVATE-");
+    expect(
+      r.post("reports.summary", {}, { sessionToken: token }).error.code,
+    ).toBe("FORBIDDEN");
+    expect(
+      r.post("requests.list", {}, { sessionToken: token }).error.code,
+    ).toBe("FORBIDDEN");
+    expect(r.post("leadership.summary").error.code).toBe("UNAUTHORIZED");
+  });
   it("sets up every table idempotently without erasing data", () => {
     const r = runtime();
     expect([...r.sheets.keys()].sort()).toEqual(

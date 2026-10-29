@@ -2,6 +2,7 @@ import type { Actor, RecordData, Role } from "../types";
 import { getLocal, putLocal } from "./storage";
 import { missionStages, requestStages, requestSchema } from "../lib/domain";
 import { operationFingerprint } from "../lib/operations";
+import { buildLeadershipSummary } from "../lib/leadership";
 type State = {
   tables: Record<string, RecordData[]>;
   processed: Record<
@@ -101,6 +102,17 @@ export function execute(
   const table = tables[group];
   if (!actor && action !== "requests.create")
     throw Error("UNAUTHORIZED: Login diperlukan");
+  if (action === "leadership.summary") {
+    if (!["Viewer pimpinan", "Administrator"].includes(actor!.role))
+      throw Error(
+        "FORBIDDEN: Akses pengawasan memerlukan peran Viewer pimpinan atau Administrator",
+      );
+    return buildLeadershipSummary(s.tables, p);
+  }
+  if (actor?.role === "Viewer pimpinan")
+    throw Error(
+      "FORBIDDEN: Gunakan ringkasan pengawasan pimpinan; data operasional rinci dibatasi",
+    );
   if (verb === "list" || verb === "get") {
     if (!table) throw Error("ACTION: Action tidak tersedia");
     let rows = s.tables[table];

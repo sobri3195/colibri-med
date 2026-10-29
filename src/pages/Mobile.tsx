@@ -185,6 +185,8 @@ export function MobileProtected({
         state={{ from: location.pathname }}
       />
     );
+  if (actor.role === "Viewer pimpinan")
+    return <Navigate to="/pimpinan" replace />;
   return <Internal actor={actor} compact section={section} key={actor.id} />;
 }
 export function MobileLogin({ onLogin }: { onLogin: (a: Actor) => void }) {
@@ -232,29 +234,44 @@ export function MobileAccount({
       </section>
       {actor && (
         <section className="mobile-menu" aria-label="Modul petugas">
-          {[
-            { path: "", label: "Ringkasan koordinasi", icon: House },
-            {
-              path: "permohonan",
-              label: "Kelola permohonan",
-              icon: ClipboardPlus,
-            },
-            {
-              path: "penilaian",
-              label: "Penilaian & catatan",
-              icon: ClipboardCheck,
-            },
-            { path: "sumber-daya", label: "Kesiapan sumber daya", icon: Boxes },
-            { path: "laporan", label: "Laporan", icon: FileText },
-            { path: "outbox", label: "Outbox & notifikasi", icon: Inbox },
-            { path: "pengaturan", label: "Pengaturan", icon: Settings },
-          ].map(({ path, label, icon: Icon }) => (
-            <Link key={path} to={"/mobile/operasi" + (path ? "/" + path : "")}>
-              <Icon size={20} />
-              <span>{label}</span>
+          {["Viewer pimpinan", "Administrator"].includes(actor.role) && (
+            <Link to="/pimpinan">
+              <House size={20} />
+              <span>Pengawasan pimpinan</span>
               <ArrowRight size={16} />
             </Link>
-          ))}
+          )}
+          {actor.role !== "Viewer pimpinan" &&
+            [
+              { path: "", label: "Ringkasan koordinasi", icon: House },
+              {
+                path: "permohonan",
+                label: "Kelola permohonan",
+                icon: ClipboardPlus,
+              },
+              {
+                path: "penilaian",
+                label: "Penilaian & catatan",
+                icon: ClipboardCheck,
+              },
+              {
+                path: "sumber-daya",
+                label: "Kesiapan sumber daya",
+                icon: Boxes,
+              },
+              { path: "laporan", label: "Laporan", icon: FileText },
+              { path: "outbox", label: "Outbox & notifikasi", icon: Inbox },
+              { path: "pengaturan", label: "Pengaturan", icon: Settings },
+            ].map(({ path, label, icon: Icon }) => (
+              <Link
+                key={path}
+                to={"/mobile/operasi" + (path ? "/" + path : "")}
+              >
+                <Icon size={20} />
+                <span>{label}</span>
+                <ArrowRight size={16} />
+              </Link>
+            ))}
           <button className="mobile-logout" onClick={() => void logout()}>
             <LogOut size={20} />
             Keluar

@@ -268,9 +268,9 @@ describe("workflow and permissions", () => {
     );
     expect(m.status).toBe("Selesai");
     expect(s.tables.MissionAssignments).toHaveLength(1);
-    expect(
+    expect(() =>
       execute(s, actor("Viewer pimpinan"), "reports.summary", {}),
-    ).not.toHaveProperty("PatientNotes");
+    ).toThrow("FORBIDDEN");
     expect(
       execute(s, actor("Dokter/perawat"), "reports.summary", {}),
     ).toHaveProperty("PatientNotes");

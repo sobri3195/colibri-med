@@ -12,6 +12,10 @@
 - Rate limit memakai CacheService yang dapat dieviksikan dan lock global. Tidak ada perlindungan DDoS menyeluruh, MFA, reset password mandiri, daftar sesi pengguna, rotasi token otomatis atau registrasi publik.
 - Tidak ada deployment publik dalam pekerjaan ini. Dokumentasi deployment perlu diverifikasi dengan sumber resmi ketika akses jaringan tersedia.
 
+## Pengawasan pimpinan
+
+`/pimpinan` adalah usulan tampilan simulasi, bukan sistem resmi Kasau/Kemenhan/Kemenkes/Presiden. Sudut pantau mengubah penyajian, bukan akses akun. Tidak ada integrasi identitas pejabat atau data pemerintah. Akun Viewer hanya memperoleh angka agregat; tidak memiliki akses data operasional rinci. Angka kesiapan berdasarkan status yang dicatat manual dan tidak membuktikan kapasitas armada, tempat tidur atau cakupan nasional. Periode menyeleksi kohor dibuat pada hari kalender UTC, bukan seluruh misi historis yang mungkin masih aktif; jumlah aktif di luar kohor ditampilkan terpisah. Durasi hanya sampel log dan tidak tahan manipulasi oleh pemilik Sheets. Dataset besar, koneksi Sheets nyata dan deployment Vercel tetap belum diuji.
+
 ## Persiapan APK berikutnya
 
 Frontend memakai React/TypeScript dan boundary services terpisah. Fase berikutnya dapat menambahkan Capacitor dengan output Vite `dist`, izin lokasi berbasis tindakan pengguna, serta adapter penyimpanan sesuai kebutuhan. Jangan memakai shared secret di APK. Cookie same-origin dan validasi Origin connected saat ini dirancang untuk HTTPS web; origin WebView berbeda dan **belum didukung**. Autentikasi dan strategi API mobile memerlukan kajian tersendiri sebelum membungkus frontend. APK bukan deliverable fase awal.
