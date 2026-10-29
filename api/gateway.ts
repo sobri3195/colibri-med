@@ -34,6 +34,8 @@ export const actions = new Set([
   "reports.summary",
   "leadership.summary",
   "activity.list",
+  "aircraft.snapshot",
+  "aircraftReports.create",
 ]);
 const MAX = 32768;
 export const config = { maxDuration: 60 };

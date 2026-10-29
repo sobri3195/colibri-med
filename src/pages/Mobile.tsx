@@ -25,6 +25,7 @@ import BrandMark from "../components/BrandMark";
 import { mode } from "../services/api";
 import Login from "./Login";
 import Internal from "./Internal";
+import AirOperations from "./AirOperations";
 import { useConnection } from "../features/useConnection";
 import {
   requestSearch,
@@ -271,6 +272,8 @@ export function MobileProtected({
     );
   if (actor.role === "Viewer pimpinan")
     return <Navigate to="/pimpinan" replace />;
+  if (currentSection === "helikopter")
+    return <AirOperations actor={actor} mobile key={actor.id} />;
   return <Internal actor={actor} compact section={section} key={actor.id} />;
 }
 export function MobileLogin({ onLogin }: { onLogin: (a: Actor) => void }) {
@@ -323,6 +326,11 @@ export function MobileAccount({
           {actor.role !== "Viewer pimpinan" &&
             [
               { path: "", label: "Ringkasan koordinasi", icon: House },
+              {
+                path: "helikopter",
+                label: "Pemantauan helikopter",
+                icon: Plane,
+              },
               {
                 path: "permohonan",
                 label: "Kelola permohonan",

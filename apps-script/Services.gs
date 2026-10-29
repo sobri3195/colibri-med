@@ -19,43 +19,52 @@ function service_(actor, action, p) {
     resources: "Resources",
     handovers: "HandoverRecords",
     activity: "ActivityLogs",
+    aircraft: "Aircraft",
+    aircraftReports: "AircraftReports",
   };
-  var mutation = !/\.(list|get|summary)$/.test(action);
+  var mutation = !/\.(list|get|summary|snapshot)$/.test(action);
   var names =
-    action === "leadership.summary"
-      ? [
-          "Requests",
-          "Missions",
-          "MedicalReviews",
-          "FlightReviews",
-          "HandoverRecords",
-          "Resources",
-          "Facilities",
-          "ActivityLogs",
-        ]
-      : action === "reports.summary"
-        ? TABLES.filter(function (n) {
-            return (
-              ["Users", "Sessions", "Settings", "ProcessedOperations"].indexOf(
-                n,
-              ) < 0
-            );
-          })
-        : mutation
-          ? [
-              "Requests",
-              "Missions",
-              "MedicalReviews",
-              "FlightReviews",
-              "PatientNotes",
-              "Checklists",
-              "HandoverRecords",
-              "MissionAssignments",
-              "ActivityLogs",
-              "Resources",
-              "Facilities",
-            ]
-          : [tables[group]];
+    action === "aircraft.snapshot"
+      ? ["Aircraft", "AircraftReports", "Missions"]
+      : action === "leadership.summary"
+        ? [
+            "Requests",
+            "Missions",
+            "MedicalReviews",
+            "FlightReviews",
+            "HandoverRecords",
+            "Resources",
+            "Facilities",
+            "ActivityLogs",
+          ]
+        : action === "reports.summary"
+          ? TABLES.filter(function (n) {
+              return (
+                [
+                  "Users",
+                  "Sessions",
+                  "Settings",
+                  "ProcessedOperations",
+                ].indexOf(n) < 0
+              );
+            })
+          : mutation
+            ? [
+                "Requests",
+                "Missions",
+                "MedicalReviews",
+                "FlightReviews",
+                "PatientNotes",
+                "Checklists",
+                "HandoverRecords",
+                "MissionAssignments",
+                "ActivityLogs",
+                "Resources",
+                "Facilities",
+                "Aircraft",
+                "AircraftReports",
+              ]
+            : [tables[group]];
   if (
     action === "reports.summary" &&
     ["Dokter/perawat", "Koordinator medis", "Administrator"].indexOf(

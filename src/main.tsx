@@ -14,6 +14,7 @@ import { Home, Info, RequestForm } from "./pages/Public";
 import Login from "./pages/Login";
 import Internal from "./pages/Internal";
 import Leadership from "./pages/Leadership";
+import { AdminFlightPage } from "./pages/AirOperations";
 import {
   MobileLayout,
   MobileHome,
@@ -41,6 +42,9 @@ function App() {
   const location = useLocation();
   const isMobile = /^\/mobile(?:\/|$)/.test(location.pathname);
   const isLeadership = /^\/pimpinan(?:\/|$)/.test(location.pathname);
+  const isAdmin = /^\/admin(?:\/|$)/.test(location.pathname);
+  const adminRef = useRef(isAdmin);
+  adminRef.current = isAdmin;
   const mobileRef = useRef(isMobile);
   mobileRef.current = isMobile;
   const leadershipRef = useRef(isLeadership);
@@ -59,11 +63,13 @@ function App() {
       setActor(null);
       setError("");
       navigate(
-        leadershipRef.current
-          ? "/pimpinan"
-          : mobileRef.current
-            ? "/mobile/akun"
-            : "/login",
+        adminRef.current
+          ? "/admin/login"
+          : leadershipRef.current
+            ? "/pimpinan"
+            : mobileRef.current
+              ? "/mobile/akun"
+              : "/login",
       );
     } catch (e) {
       setError(String(e));
@@ -83,11 +89,13 @@ function App() {
       if (mode === "demo") clearDemoSession();
       setError("Sesi kedaluwarsa. Masuk kembali untuk mengirim operasi.");
       navigate(
-        leadershipRef.current
-          ? "/pimpinan"
-          : mobileRef.current
-            ? "/mobile/login"
-            : "/login",
+        adminRef.current
+          ? "/admin/login"
+          : leadershipRef.current
+            ? "/pimpinan"
+            : mobileRef.current
+              ? "/mobile/login"
+              : "/login",
       );
     };
     window.addEventListener("colibri-session-expired", expired);
@@ -101,11 +109,13 @@ function App() {
         if (mode === "demo") clearDemoSession();
         setError("Sesi kedaluwarsa. Masuk kembali untuk mengirim operasi.");
         navigate(
-          leadershipRef.current
-            ? "/pimpinan"
-            : mobileRef.current
-              ? "/mobile/login"
-              : "/login",
+          adminRef.current
+            ? "/admin/login"
+            : leadershipRef.current
+              ? "/pimpinan"
+              : mobileRef.current
+                ? "/mobile/login"
+                : "/login",
         );
       },
       mode === "demo" ? Math.max(0, expiresAt - Date.now()) : 60 * 60 * 1000,
@@ -166,6 +176,18 @@ function App() {
       )}
       <main>
         <Routes>
+          <Route path="/index" element={<Navigate to="/" replace />} />
+          <Route path="/index.html" element={<Navigate to="/" replace />} />
+          <Route
+            path="/admin/:section?"
+            element={
+              <AdminFlightPage
+                actor={actor}
+                checking={checking}
+                onLogin={onLogin}
+              />
+            }
+          />
           <Route
             path="/pimpinan/:section?"
             element={
@@ -231,7 +253,23 @@ function App() {
               }
             />
           </Route>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={
+              <Home
+                actor={actor}
+                onDemoAdmin={() => {
+                  if (mode !== "demo") return;
+                  onLogin({
+                    id: "demo:Administrator",
+                    name: "Administrator Demo",
+                    role: "Administrator",
+                  });
+                  navigate("/admin");
+                }}
+              />
+            }
+          />
           <Route path="/tentang" element={<Info />} />
           <Route
             path="/permohonan"

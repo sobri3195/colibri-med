@@ -51,3 +51,7 @@ Dokumentasi resmi yang perlu diperiksa sebelum deployment:
 Pada lingkungan implementasi ini, akses ke dokumentasi resmi Vercel/Apps Script dan referensi konsep Lovable tidak tersedia menurut kebijakan jaringan. Instruksi di atas disiapkan untuk ditinjau; opsi akun/domain dan connected end-to-end belum diverifikasi. Tidak ada klaim deployment nyata berhasil.
 
 Gunakan tile standar OpenStreetMap hanya untuk tampilan interaktif. Jangan bulk download, prefetch offline, atau menyimpan tile lewat service worker. Jangan menjanjikan kapasitas/ketersediaan tile. Input koordinat manual dan daftar lokasi tetap tersedia ketika tile gagal.
+
+## Pembaruan modul helikopter
+
+Perbarui Code/Domain/Validation/Services/Sheets/Setup dari source terbaru, jalankan `setupSheets` untuk menambahkan Aircraft dan AircraftReports, lalu `seedSyntheticData` untuk contoh sintetis. Setup tidak menghapus sheet lama; seed tidak menggandakan unit/laporan yang sudah ada. Perbarui deployment Apps Script dan gateway/frontend sebagai versi yang terkoordinasi. Akun Administrator connected tetap dibuat melalui prosedur undangan; tombol admin demo hanya tersedia ketika VITE_APP_MODE=demo. Tidak ada konfigurasi atau kredensial perangkat helikopter nyata dalam prototipe ini.
