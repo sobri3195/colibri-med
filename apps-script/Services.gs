@@ -53,6 +53,7 @@ function service_(actor, action, p) {
               "MissionAssignments",
               "ActivityLogs",
               "Resources",
+              "Facilities",
             ]
           : [tables[group]];
   if (

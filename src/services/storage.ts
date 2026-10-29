@@ -1,15 +1,26 @@
 import { openDB } from "idb";
 import type { Operation } from "../types";
+const notifyOutbox = () => {
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new Event("colibri-outbox-changed"));
+};
 let connection: ReturnType<typeof openDB> | undefined;
 const db = () =>
-  (connection ??= openDB("colibri-med", 3, {
+  (connection ??= openDB("colibri-med", 4, {
     blocking() {
       const active = connection;
       connection = undefined;
       void active?.then((d) => d.close());
     },
     upgrade(d) {
-      for (const name of ["drafts", "outbox", "demo", "meta", "archive"])
+      for (const name of [
+        "drafts",
+        "outbox",
+        "demo",
+        "meta",
+        "archive",
+        "receipts",
+      ])
         if (!d.objectStoreNames.contains(name)) d.createObjectStore(name);
     },
   }));
@@ -36,6 +47,7 @@ export async function queue(owner: string, op: Operation) {
   }
   await store.put({ ...op, owner, sequence }, key);
   await tx.done;
+  notifyOutbox();
 }
 export async function outbox(owner: string): Promise<Operation[]> {
   return (await (await db()).getAll("outbox"))
@@ -48,7 +60,8 @@ export async function outbox(owner: string): Promise<Operation[]> {
     );
 }
 export async function dequeue(owner: string, id: string) {
-  return (await db()).delete("outbox", owner + ":" + id);
+  await (await db()).delete("outbox", owner + ":" + id);
+  notifyOutbox();
 }
 export async function archiveOperation(owner: string, id: string) {
   const tx = (await db()).transaction(["outbox", "archive"], "readwrite");
@@ -68,9 +81,37 @@ export async function archiveOperation(owner: string, id: string) {
     .put({ ...operation, archivedAt: new Date().toISOString() }, key);
   await tx.objectStore("outbox").delete(key);
   await tx.done;
+  notifyOutbox();
 }
 export async function archivedOperations(owner: string) {
   return (await (await db()).getAll("archive")).filter(
     (r) => r.owner === owner,
   );
+}
+export async function saveReceipt(
+  owner: string,
+  operation: Operation,
+  result: unknown,
+) {
+  if (operation.action !== "requests.create") return;
+  const data = result as { id?: string; status?: string };
+  if (!data?.id) return;
+  await (
+    await db()
+  ).put(
+    "receipts",
+    {
+      owner,
+      operationId: operation.operationId,
+      id: data.id,
+      status: data.status,
+      recordedAt: new Date().toISOString(),
+    },
+    owner + ":" + operation.operationId,
+  );
+}
+export async function receipts(owner: string) {
+  return (await (await db()).getAll("receipts"))
+    .filter((r) => r.owner === owner)
+    .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
 }

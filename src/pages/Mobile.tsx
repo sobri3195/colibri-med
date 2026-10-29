@@ -1,5 +1,11 @@
 import { useEffect } from "react";
-import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
+import {
+  Link,
+  Navigate,
+  Outlet,
+  useLocation,
+  useParams,
+} from "react-router-dom";
 import {
   ArrowRight,
   ClipboardPlus,
@@ -18,6 +24,12 @@ import type { Actor } from "../types";
 import { mode } from "../services/api";
 import Login from "./Login";
 import Internal from "./Internal";
+import { useConnection } from "../features/useConnection";
+import {
+  requestSearch,
+  mobileDestination,
+  mobileSections,
+} from "../lib/mobile";
 
 const tabs = [
   { path: "/mobile", label: "Beranda", icon: House },
@@ -27,7 +39,23 @@ const tabs = [
   { path: "/mobile/akun", label: "Akun", icon: UserRound },
 ];
 export function MobileLayout({ actor }: { actor: Actor | null }) {
-  const pathname = useLocation().pathname.replace(/\/+$/, "") || "/";
+  const location = useLocation();
+  const pathname = location.pathname.replace(/\/+$/, "") || "/";
+  const context = requestSearch(location.search);
+  const connection = useConnection(actor, pathname);
+  const navigation = tabs.map((t) =>
+    actor?.role === "Viewer pimpinan"
+      ? t.path === "/mobile/misi"
+        ? { ...t, path: "/pimpinan/operasi", label: "Operasi" }
+        : t.path === "/mobile/peta"
+          ? { ...t, path: "/pimpinan/kesiapan", label: "Kesiapan" }
+          : t.path === "/mobile/permohonan"
+            ? { ...t, path: "/pimpinan", label: "Ringkasan" }
+            : t
+      : actor && t.path === "/mobile/permohonan"
+        ? { ...t, path: "/mobile/operasi/permohonan" }
+        : t,
+  );
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
@@ -52,23 +80,51 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
           <UserRound size={21} />
         </Link>
       </header>
+      <div
+        className={
+          connection.online ? "mobile-connection" : "mobile-connection offline"
+        }
+        role="status"
+      >
+        <span>
+          {connection.online
+            ? "Perangkat online"
+            : "Offline · gunakan draft lokal"}
+        </span>
+        {!!connection.pending && (
+          <Link
+            to={
+              actor?.role === "Viewer pimpinan"
+                ? "/pimpinan"
+                : actor
+                  ? "/mobile/operasi/outbox" + context
+                  : "/mobile/permohonan"
+            }
+          >
+            {connection.pending} operasi tertunda
+          </Link>
+        )}
+      </div>
       <div className="mobile-content">
         <Outlet />
       </div>
       <nav className="bottom-navigation" aria-label="Navigasi bawah">
-        {tabs.map(({ path, label, icon: Icon }) => {
+        {navigation.map(({ path, label, icon: Icon }) => {
           const active =
-            path === "/mobile"
-              ? pathname === path
-              : path === "/mobile/akun"
-                ? pathname === path ||
-                  pathname === "/mobile/login" ||
-                  pathname.startsWith("/mobile/operasi")
-                : pathname === path || pathname.startsWith(path + "/");
+            label === "Permohonan" && pathname === "/mobile/permohonan"
+              ? true
+              : path === "/mobile"
+                ? pathname === path
+                : path === "/mobile/akun"
+                  ? pathname === path ||
+                    pathname === "/mobile/login" ||
+                    (pathname.startsWith("/mobile/operasi") &&
+                      pathname !== "/mobile/operasi/permohonan")
+                  : pathname === path || pathname.startsWith(path + "/");
           return (
             <Link
               key={path}
-              to={path}
+              to={path + context}
               className={active ? "bottom-link active" : "bottom-link"}
               aria-current={active ? "page" : undefined}
             >
@@ -87,6 +143,8 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
   );
 }
 export function MobileHome({ actor }: { actor: Actor | null }) {
+  const context = requestSearch(useLocation().search);
+  const viewer = actor?.role === "Viewer pimpinan";
   return (
     <>
       <section className="mobile-welcome">
@@ -105,9 +163,19 @@ export function MobileHome({ actor }: { actor: Actor | null }) {
         </div>
         <Link
           className="button"
-          to={actor ? "/mobile/operasi" : "/mobile/permohonan"}
+          to={
+            viewer
+              ? "/pimpinan"
+              : actor
+                ? "/mobile/operasi" + context
+                : "/mobile/permohonan"
+          }
         >
-          {actor ? "Buka ringkasan koordinasi" : "Buat permohonan simulasi"}
+          {viewer
+            ? "Buka pengawasan pimpinan"
+            : actor
+              ? "Buka ringkasan koordinasi"
+              : "Buat permohonan simulasi"}
           <ArrowRight size={18} />
         </Link>
       </section>
@@ -119,20 +187,28 @@ export function MobileHome({ actor }: { actor: Actor | null }) {
         <div className="mobile-shortcuts">
           {[
             {
-              to: "/mobile/permohonan",
+              to: viewer
+                ? "/pimpinan"
+                : actor
+                  ? "/mobile/operasi/permohonan" + context
+                  : "/mobile/permohonan",
               title: "Permohonan",
-              text: "Kirim kebutuhan sintetis",
+              text: viewer
+                ? "Pantau ringkasan"
+                : actor
+                  ? "Kelola & buat permohonan"
+                  : "Kirim kebutuhan sintetis",
               icon: ClipboardPlus,
             },
             {
-              to: "/mobile/misi",
+              to: viewer ? "/pimpinan/operasi" : "/mobile/misi" + context,
               title: "Papan misi",
               text: "Lanjutkan koordinasi",
               icon: Plane,
             },
             {
-              to: "/mobile/peta",
-              title: "Peta & fasilitas",
+              to: viewer ? "/pimpinan/kesiapan" : "/mobile/peta" + context,
+              title: viewer ? "Kesiapan" : "Peta & fasilitas",
               text: "Lihat lokasi contoh",
               icon: MapPin,
             },
@@ -176,13 +252,22 @@ export function MobileProtected({
   section?: string;
 }) {
   const location = useLocation();
+  const params = useParams();
+  const currentSection = section ?? params.section ?? "";
+  if (!mobileSections.includes(currentSection))
+    return (
+      <section className="card">
+        <h1>Halaman tidak ditemukan</h1>
+        <Link to="/mobile/akun">Kembali ke modul petugas</Link>
+      </section>
+    );
   if (checking) return <p role="status">Memeriksa sesi…</p>;
   if (!actor)
     return (
       <Navigate
         to="/mobile/login"
         replace
-        state={{ from: location.pathname }}
+        state={{ from: location.pathname + location.search }}
       />
     );
   if (actor.role === "Viewer pimpinan")
@@ -192,13 +277,7 @@ export function MobileProtected({
 export function MobileLogin({ onLogin }: { onLogin: (a: Actor) => void }) {
   const location = useLocation();
   const from = location.state?.from;
-  const destination =
-    typeof from === "string" &&
-    (from === "/mobile/misi" ||
-      from === "/mobile/peta" ||
-      /^\/mobile\/operasi(?:\/[a-z-]+)?$/.test(from))
-      ? from
-      : "/mobile";
+  const destination = mobileDestination(from);
   return <Login onLogin={onLogin} destination={destination} />;
 }
 export function MobileAccount({
@@ -210,6 +289,7 @@ export function MobileAccount({
   checking: boolean;
   logout: () => Promise<void>;
 }) {
+  const context = requestSearch(useLocation().search);
   if (checking) return <p role="status">Memeriksa sesi…</p>;
   return (
     <>
@@ -265,7 +345,7 @@ export function MobileAccount({
             ].map(({ path, label, icon: Icon }) => (
               <Link
                 key={path}
-                to={"/mobile/operasi" + (path ? "/" + path : "")}
+                to={"/mobile/operasi" + (path ? "/" + path : "") + context}
               >
                 <Icon size={20} />
                 <span>{label}</span>

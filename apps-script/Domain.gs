@@ -19957,6 +19957,30 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
 
   // src/lib/domain.ts
+  var coordinate = (min, max) => external_exports.union([external_exports.number(), external_exports.string().trim().min(1)]).transform(Number).pipe(external_exports.number().min(min).max(max));
+  var facilitySchema = external_exports.object({
+    name: external_exports.string().trim().min(3).max(150),
+    location: external_exports.string().trim().min(3).max(300),
+    lat: coordinate(-90, 90),
+    lng: coordinate(-180, 180),
+    status: external_exports.enum([
+      "Perlu konfirmasi",
+      "Tersedia simulasi",
+      "Tidak tersedia simulasi"
+    ])
+  });
+  var resourceSchema = external_exports.object({
+    name: external_exports.string().trim().min(3).max(150),
+    category: external_exports.enum(["Personel", "Peralatan", "Dukungan"]),
+    status: external_exports.enum(["Perlu konfirmasi", "Siap simulasi", "Tidak siap simulasi"])
+  });
+  var checklistItems = [
+    { id: "request", label: "Permohonan dan identitas sintetis diperiksa" },
+    { id: "coordination", label: "Koordinasi tim dicatat" },
+    { id: "facility", label: "Fasilitas penerima dikonfirmasi oleh petugas" },
+    { id: "documentation", label: "Dokumen simulasi dan catatan disiapkan" },
+    { id: "handover", label: "Rencana serah terima dikoordinasikan" }
+  ];
   var requestSchema = external_exports.object({
     name: external_exports.string().trim().min(3).max(100),
     contact: external_exports.string().max(100),
@@ -20723,11 +20747,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       );
     if (actor?.role !== "Administrator" && !(grants[group] ?? []).includes(actor?.role) && !(action === "requests.create"))
       throw Error("FORBIDDEN: Peran tidak berwenang");
-    if (!table || !["create", "update", "transition", "assign", "save"].includes(verb))
+    if (!table || !["create", "update", "transition", "assign", "save", "reassign"].includes(
+      verb
+    ))
       throw Error("ACTION: Action tidak tersedia");
     if (typeof p.operationId !== "string" || !p.operationId)
       throw Error("VALIDATION: operationId diperlukan");
     const owner = actor?.id ?? "public";
+    if (["facilities.create", "facilities.update", "resources.create"].includes(
+      action
+    ) && actor?.role !== "Administrator")
+      throw Error("FORBIDDEN: Pengelolaan direktori memerlukan Administrator");
     const fingerprint = operationFingerprint(action, p);
     const previous = s.processed[p.operationId];
     if (previous) {
@@ -20744,7 +20774,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     let row = s.tables[table].find((r) => r.id === p.id);
     const priorRevision = row?.revision;
     const previousStatus = row?.status ?? "";
-    const previousUpdatedAt = row?.updatedAt;
+    const previousUpdatedAt = typeof row?.stageChangedAt === "string" ? row.stageChangedAt : row?.updatedAt;
     if (group.includes("Reviews")) {
       const existing = s.tables[table].filter((r) => r.requestId === p.data?.requestId).at(-1);
       if (existing && row?.id !== existing.id)
@@ -20792,14 +20822,67 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
           status: "Ditugaskan"
         })
       );
+    } else if (action === "missions.reassign") {
+      if (!row) throw Error("NOT_FOUND: Misi tidak ditemukan");
+      if (!["Persiapan", "Tim Ditugaskan"].includes(row.status))
+        throw Error("WORKFLOW: Perubahan tim hanya sebelum keberangkatan");
+      if (typeof p.team !== "string" || !p.team.trim() || p.team.length > 150 || typeof p.reason !== "string" || !p.reason.trim() || p.reason.length > 500)
+        throw Error("VALIDATION: Nama tim dan alasan perubahan wajib diisi");
+      row.stageChangedAt = previousUpdatedAt;
+      row.team = p.team.trim();
+      row.reason = p.reason.trim();
+      for (const assignment of s.tables.MissionAssignments.filter(
+        (a) => a.missionId === row.id && a.status === "Ditugaskan"
+      )) {
+        assignment.status = "Diganti";
+        assignment.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+        assignment.updatedBy = owner;
+        assignment.revision++;
+      }
+      s.tables.MissionAssignments.push(
+        record2({
+          missionId: row.id,
+          team: row.team,
+          reason: row.reason,
+          createdBy: owner,
+          status: "Ditugaskan"
+        })
+      );
     } else if (action === "requests.update") {
       if (!row) throw Error("NOT_FOUND: Record tidak ditemukan");
       Object.assign(row, parseRequest(p.data));
+    } else if (["facilities.create", "facilities.update", "resources.create"].includes(
+      action
+    )) {
+      if (verb === "create" && row)
+        throw Error("CONFLICT: ID direktori sudah digunakan");
+      if (verb === "update" && !row)
+        throw Error("NOT_FOUND: Record direktori tidak ditemukan");
+      const parsed = (group === "facilities" ? facilitySchema : resourceSchema).safeParse(p.data);
+      if (!parsed.success)
+        throw Error(
+          "VALIDATION: Data direktori tidak valid; periksa nama, lokasi, koordinat dan status"
+        );
+      if (row) Object.assign(row, parsed.data);
+      else {
+        row = record2({
+          ...parsed.data,
+          id: p.id ?? crypto.randomUUID(),
+          createdBy: owner
+        });
+        s.tables[table].push(row);
+      }
     } else if (action === "resources.update") {
       if (!row || typeof p.data?.status !== "string" || !["Perlu konfirmasi", "Siap simulasi", "Tidak siap simulasi"].includes(
         p.data.status
       ))
         throw Error("VALIDATION: Status kesiapan tidak valid");
+      if (actor?.role === "Administrator" && p.data.name !== void 0) {
+        const parsed = resourceSchema.safeParse(p.data);
+        if (!parsed.success)
+          throw Error("VALIDATION: Data sumber daya tidak valid");
+        Object.assign(row, parsed.data);
+      }
       row.status = p.data.status;
     } else if (verb === "transition") {
       if (p.reason !== void 0 && (typeof p.reason !== "string" || p.reason.length > 500))
@@ -20823,6 +20906,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       if (p.status === "Selesai" && !s.tables.HandoverRecords.some((r) => r.missionId === row.id) && !String(p.reason ?? "").trim())
         throw Error("WORKFLOW: Serah terima atau alasan override diperlukan");
       row.status = p.status;
+      if (group === "missions") row.stageChangedAt = (/* @__PURE__ */ new Date()).toISOString();
       if (p.reason) row.reason = p.reason;
     } else if (["save", "create"].includes(verb)) {
       if (group === "flightReviews" && ![
@@ -20858,7 +20942,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         requestId: p.data.requestId,
         missionId: p.data.missionId ?? "",
         status: p.data.status ?? "Dicatat",
-        reason: p.data.reason ?? ""
+        reason: p.data.reason ?? "",
+        ...group === "checklists" && p.data.items !== void 0 ? {
+          items: (() => {
+            if (!p.data.items || typeof p.data.items !== "object" || Array.isArray(p.data.items) || Object.keys(p.data.items).some(
+              (key) => !checklistItems.some((item) => item.id === key)
+            ) || checklistItems.some(
+              (item) => typeof p.data.items[item.id] !== "boolean"
+            ))
+              throw Error("VALIDATION: Butir checklist tidak valid");
+            return Object.fromEntries(
+              checklistItems.map((item) => [item.id, p.data.items[item.id]])
+            );
+          })()
+        } : {}
       };
       if (row) Object.assign(row, data);
       else {

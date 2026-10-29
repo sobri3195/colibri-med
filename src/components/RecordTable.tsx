@@ -5,10 +5,14 @@ export default function RecordTable({
   items,
   query = "",
   status = "",
+  compact = false,
+  onOpen,
 }: {
   items: RecordData[];
   query?: string;
   status?: string;
+  compact?: boolean;
+  onOpen?: (record: RecordData) => void;
 }) {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
@@ -28,46 +32,77 @@ export default function RecordTable({
     return <p className="empty">Belum ada data untuk ditampilkan.</p>;
   return (
     <>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Referensi</th>
-              <th>Nama / rincian</th>
-              <th>Status</th>
-              <th>Pembaruan (WIB)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.slice(current * size, (current + 1) * size).map((r) => (
-              <tr key={r.id}>
-                <td>{r.id.slice(0, 8)}</td>
-                <td>
+      {compact ? (
+        <div className="mobile-record-list">
+          {rows.slice(current * size, (current + 1) * size).map((r) => (
+            <article className="mobile-record" key={r.id}>
+              <div>
+                <strong>
                   {String(
-                    r.name ??
-                      r.facility ??
-                      r.text ??
+                    r.facility ??
+                      r.name ??
                       r.team ??
                       r.action ??
-                      r.requestId ??
-                      "—",
+                      "Record sintetis",
                   )}
-                  {r.durationSeconds !== undefined && (
-                    <small className="duration">
-                      Durasi tahap sebelumnya:{" "}
-                      {Number(r.durationSeconds).toFixed(0)} detik
-                    </small>
-                  )}
-                </td>
-                <td>
-                  <span className="badge">● {r.status}</span>
-                </td>
-                <td>{date(r.updatedAt)}</td>
+                </strong>
+                <span className="badge">{r.status}</span>
+              </div>
+              <small>
+                Referensi {r.id.slice(0, 8)} · {date(r.updatedAt)}
+              </small>
+              {r.text !== undefined && <p>{String(r.text)}</p>}
+              {r.location !== undefined && <p>Lokasi: {String(r.location)}</p>}
+              {onOpen && (
+                <button className="secondary" onClick={() => onOpen(r)}>
+                  Buka permohonan {r.id.slice(0, 8)}
+                </button>
+              )}
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Referensi</th>
+                <th>Nama / rincian</th>
+                <th>Status</th>
+                <th>Pembaruan (WIB)</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.slice(current * size, (current + 1) * size).map((r) => (
+                <tr key={r.id}>
+                  <td>{r.id.slice(0, 8)}</td>
+                  <td>
+                    {String(
+                      r.name ??
+                        r.facility ??
+                        r.text ??
+                        r.team ??
+                        r.action ??
+                        r.requestId ??
+                        "—",
+                    )}
+                    {r.durationSeconds !== undefined && (
+                      <small className="duration">
+                        Durasi tahap sebelumnya:{" "}
+                        {Number(r.durationSeconds).toFixed(0)} detik
+                      </small>
+                    )}
+                  </td>
+                  <td>
+                    <span className="badge">● {r.status}</span>
+                  </td>
+                  <td>{date(r.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {!rows.length ? (
         <p>Tidak ada hasil sesuai filter.</p>
       ) : (

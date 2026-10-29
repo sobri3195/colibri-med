@@ -1,6 +1,13 @@
 import type { Actor, RecordData, Role } from "../types";
 import { getLocal, putLocal } from "./storage";
-import { missionStages, requestStages, requestSchema } from "../lib/domain";
+import {
+  missionStages,
+  requestStages,
+  requestSchema,
+  facilitySchema,
+  resourceSchema,
+  checklistItems,
+} from "../lib/domain";
 import { operationFingerprint } from "../lib/operations";
 import { buildLeadershipSummary } from "../lib/leadership";
 type State = {
@@ -161,12 +168,21 @@ export function execute(
     throw Error("FORBIDDEN: Peran tidak berwenang");
   if (
     !table ||
-    !["create", "update", "transition", "assign", "save"].includes(verb)
+    !["create", "update", "transition", "assign", "save", "reassign"].includes(
+      verb,
+    )
   )
     throw Error("ACTION: Action tidak tersedia");
   if (typeof p.operationId !== "string" || !p.operationId)
     throw Error("VALIDATION: operationId diperlukan");
   const owner = actor?.id ?? "public";
+  if (
+    ["facilities.create", "facilities.update", "resources.create"].includes(
+      action,
+    ) &&
+    actor?.role !== "Administrator"
+  )
+    throw Error("FORBIDDEN: Pengelolaan direktori memerlukan Administrator");
   const fingerprint = operationFingerprint(action, p);
   const previous = s.processed[p.operationId];
   if (previous) {
@@ -187,7 +203,10 @@ export function execute(
   let row = s.tables[table].find((r) => r.id === p.id);
   const priorRevision = row?.revision;
   const previousStatus = row?.status ?? "";
-  const previousUpdatedAt = row?.updatedAt;
+  const previousUpdatedAt =
+    typeof row?.stageChangedAt === "string"
+      ? row.stageChangedAt
+      : row?.updatedAt;
   if (group.includes("Reviews")) {
     const existing = s.tables[table]
       .filter((r) => r.requestId === p.data?.requestId)
@@ -239,9 +258,67 @@ export function execute(
         status: "Ditugaskan",
       }),
     );
+  } else if (action === "missions.reassign") {
+    if (!row) throw Error("NOT_FOUND: Misi tidak ditemukan");
+    if (!["Persiapan", "Tim Ditugaskan"].includes(row.status))
+      throw Error("WORKFLOW: Perubahan tim hanya sebelum keberangkatan");
+    if (
+      typeof p.team !== "string" ||
+      !p.team.trim() ||
+      p.team.length > 150 ||
+      typeof p.reason !== "string" ||
+      !p.reason.trim() ||
+      p.reason.length > 500
+    )
+      throw Error("VALIDATION: Nama tim dan alasan perubahan wajib diisi");
+    row.stageChangedAt = previousUpdatedAt;
+    row.team = p.team.trim();
+    row.reason = p.reason.trim();
+    for (const assignment of s.tables.MissionAssignments.filter(
+      (a) => a.missionId === row!.id && a.status === "Ditugaskan",
+    )) {
+      assignment.status = "Diganti";
+      assignment.updatedAt = new Date().toISOString();
+      assignment.updatedBy = owner;
+      assignment.revision++;
+    }
+    s.tables.MissionAssignments.push(
+      record({
+        missionId: row.id,
+        team: row.team,
+        reason: row.reason,
+        createdBy: owner,
+        status: "Ditugaskan",
+      }),
+    );
   } else if (action === "requests.update") {
     if (!row) throw Error("NOT_FOUND: Record tidak ditemukan");
     Object.assign(row, parseRequest(p.data));
+  } else if (
+    ["facilities.create", "facilities.update", "resources.create"].includes(
+      action,
+    )
+  ) {
+    if (verb === "create" && row)
+      throw Error("CONFLICT: ID direktori sudah digunakan");
+    if (verb === "update" && !row)
+      throw Error("NOT_FOUND: Record direktori tidak ditemukan");
+    const parsed = (
+      group === "facilities" ? facilitySchema : resourceSchema
+    ).safeParse(p.data);
+    if (!parsed.success)
+      throw Error(
+        "VALIDATION: Data direktori tidak valid; periksa nama, lokasi, koordinat dan status",
+      );
+    if (row) Object.assign(row, parsed.data);
+    else {
+      row = record({
+        ...parsed.data,
+        id: p.id ?? crypto.randomUUID(),
+        createdBy: owner,
+      });
+      s.tables[table].push(row);
+    }
   } else if (action === "resources.update") {
     if (
       !row ||
@@ -251,6 +328,12 @@ export function execute(
       )
     )
       throw Error("VALIDATION: Status kesiapan tidak valid");
+    if (actor?.role === "Administrator" && p.data.name !== undefined) {
+      const parsed = resourceSchema.safeParse(p.data);
+      if (!parsed.success)
+        throw Error("VALIDATION: Data sumber daya tidak valid");
+      Object.assign(row, parsed.data);
+    }
     row.status = p.data.status;
   } else if (verb === "transition") {
     if (
@@ -287,6 +370,7 @@ export function execute(
     )
       throw Error("WORKFLOW: Serah terima atau alasan override diperlukan");
     row.status = p.status;
+    if (group === "missions") row.stageChangedAt = new Date().toISOString();
     if (p.reason) row.reason = p.reason;
   } else if (["save", "create"].includes(verb)) {
     if (
@@ -346,6 +430,27 @@ export function execute(
       missionId: p.data.missionId ?? "",
       status: p.data.status ?? "Dicatat",
       reason: p.data.reason ?? "",
+      ...(group === "checklists" && p.data.items !== undefined
+        ? {
+            items: (() => {
+              if (
+                !p.data.items ||
+                typeof p.data.items !== "object" ||
+                Array.isArray(p.data.items) ||
+                Object.keys(p.data.items).some(
+                  (key) => !checklistItems.some((item) => item.id === key),
+                ) ||
+                checklistItems.some(
+                  (item) => typeof p.data.items[item.id] !== "boolean",
+                )
+              )
+                throw Error("VALIDATION: Butir checklist tidak valid");
+              return Object.fromEntries(
+                checklistItems.map((item) => [item.id, p.data.items[item.id]]),
+              );
+            })(),
+          }
+        : {}),
     };
     if (row) Object.assign(row, data);
     else {

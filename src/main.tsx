@@ -23,9 +23,18 @@ import {
 } from "./pages/Mobile";
 import { call, mode } from "./services/api";
 import type { Actor } from "./types";
+import {
+  readDemoSession,
+  saveDemoSession,
+  clearDemoSession,
+} from "./services/session";
 import "./styles.css";
 function App() {
-  const [actor, setActor] = useState<Actor | null>(null);
+  const [initialDemo] = useState(() =>
+    mode === "demo" ? readDemoSession() : null,
+  );
+  const [actor, setActor] = useState<Actor | null>(initialDemo?.actor ?? null);
+  const [expiresAt, setExpiresAt] = useState(initialDemo?.expiresAt ?? 0);
   const [error, setError] = useState("");
   const [checking, setChecking] = useState(mode === "connected");
   const navigate = useNavigate();
@@ -38,11 +47,15 @@ function App() {
   leadershipRef.current = isLeadership;
   const onLogin = (a: Actor) => {
     setError("");
+    setExpiresAt(
+      mode === "demo" ? saveDemoSession(a).expiresAt : Date.now() + 3600000,
+    );
     setActor(a);
   };
   const logout = async () => {
     try {
       if (mode === "connected") await call("auth.logout");
+      if (mode === "demo") clearDemoSession();
       setActor(null);
       setError("");
       navigate(
@@ -67,6 +80,7 @@ function App() {
     if (!actor) return;
     const expired = () => {
       setActor(null);
+      if (mode === "demo") clearDemoSession();
       setError("Sesi kedaluwarsa. Masuk kembali untuk mengirim operasi.");
       navigate(
         leadershipRef.current
@@ -84,6 +98,7 @@ function App() {
     const timer = setTimeout(
       () => {
         setActor(null);
+        if (mode === "demo") clearDemoSession();
         setError("Sesi kedaluwarsa. Masuk kembali untuk mengirim operasi.");
         navigate(
           leadershipRef.current
@@ -93,10 +108,10 @@ function App() {
               : "/login",
         );
       },
-      60 * 60 * 1000,
+      mode === "demo" ? Math.max(0, expiresAt - Date.now()) : 60 * 60 * 1000,
     );
     return () => clearTimeout(timer);
-  }, [actor, navigate]);
+  }, [actor, navigate, expiresAt]);
   return (
     <div
       className={
