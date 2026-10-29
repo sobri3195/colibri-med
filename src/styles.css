@@ -92,6 +92,13 @@ header nav {
 .brand b {
   color: #087f83;
 }
+.brand-mark {
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
 .brand small {
   display: block;
   font-size: 8px;
@@ -135,7 +142,7 @@ h3 {
   position: relative;
   background: #e9f2f8;
   border-radius: 18px;
-  padding: 64px 48px;
+  padding: 64px 320px 64px 48px;
   overflow: hidden;
   margin-bottom: 28px;
 }
@@ -152,11 +159,20 @@ h3 {
 }
 .hero-icon {
   position: absolute;
-  right: 8%;
-  top: 26%;
-  color: #a7c5d3;
-  opacity: 0.4;
+  right: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: clamp(180px, 20vw, 256px);
+  height: auto;
   pointer-events: none;
+}
+@media (max-width: 1100px) {
+  .hero {
+    padding-right: 48px;
+  }
+  .hero-icon {
+    display: none;
+  }
 }
 .muted,
 small {
@@ -1042,15 +1058,9 @@ a:focus-visible {
   font-size: 8px;
   letter-spacing: 1px;
 }
-.mobile-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.mobile-header .brand-mark {
   width: 44px;
   height: 44px;
-  background: #122840;
-  border-radius: 13px;
-  color: white;
 }
 .mobile-profile {
   display: flex;

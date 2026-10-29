@@ -69,3 +69,7 @@ Permohonan menyediakan draft, pengiriman offline, kirim ulang, serta bukti penca
 Checklist memiliki lima butir koordinasi sintetis yang dapat dicentang dan disimpan dengan revision. Penugasan tim dapat diubah sebelum keberangkatan dengan alasan. Administrator dapat menambah/memperbarui fasilitas dan sumber daya; Operator tetap hanya memperbarui kesiapan. Menonaktifkan direktori memakai status, tanpa menghapus riwayat. Pengaturan polling tersimpan per mode dan pengguna pada perangkat.
 
 Lihat [panduan uji semua menu mobile](docs/MOBILE-WORKFLOW.md) untuk alur dari permohonan hingga laporan. Semua fungsi diverifikasi dalam demo dan adapter Apps Script mock; koneksi Google Sheets/Vercel nyata memerlukan konfigurasi deployment dan belum diklaim berhasil.
+
+## Logo dan favicon
+
+Identitas visual memakai helikopter putih, perisai biru-hijau, sayap emas, dan tongkat medis yang terinspirasi referensi Puskesau. Logo digunakan pada beranda, header desktop, mobile, dan pimpinan. Favicon tersedia sebagai ICO/PNG, dengan Apple touch icon dan ikon manifest. Lihat [aset sumber dan panduan regenerasi](design/README.md). Desain ini untuk prototipe COLIBRI MED dan tidak menyatakan pengesahan resmi Puskesau.

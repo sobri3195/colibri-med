@@ -9,7 +9,7 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import { Plane } from "lucide-react";
+import BrandMark from "./components/BrandMark";
 import { Home, Info, RequestForm } from "./pages/Public";
 import Login from "./pages/Login";
 import Internal from "./pages/Internal";
@@ -129,7 +129,7 @@ function App() {
       {!isMobile && !isLeadership && (
         <header>
           <Link className="brand" to="/">
-            <Plane size={30} />
+            <BrandMark />
             <div>
               COLIBRI <b>MED</b>
               <small>KOORDINASI EVAKUASI MEDIS UDARA</small>

@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build && node scripts/check-bundle.mjs",
     "test": "vitest run",
     "build:gas": "node scripts/build-gas.mjs",
+    "build:branding": "node scripts/build-branding.mjs",
     "check": "npm run build:gas && npm test && npm run build",
     "test:e2e": "playwright test",
     "format:check": "prettier --check src api tests e2e scripts *.json *.ts"

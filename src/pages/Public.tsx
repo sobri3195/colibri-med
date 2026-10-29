@@ -43,9 +43,13 @@ export function Home() {
             Pengawasan pimpinan
           </Link>
         </div>
-        <div className="hero-icon">
-          <Plane size={160} strokeWidth={1} />
-        </div>
+        <img
+          className="hero-icon"
+          src="/branding/colibri-med-logo-512.png"
+          width="256"
+          height="256"
+          alt="Lambang COLIBRI MED: helikopter, perisai biru-hijau, sayap emas, dan tongkat medis"
+        />
       </section>
       <div className="grid three">
         {[
