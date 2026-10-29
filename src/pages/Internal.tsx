@@ -33,8 +33,17 @@ const tabs = [
   ["outbox", "Outbox & notifikasi"],
   ["pengaturan", "Pengaturan"],
 ];
-export default function Internal({ actor }: { actor: Actor }) {
-  const { section = "" } = useParams();
+export default function Internal({
+  actor,
+  compact = false,
+  section: sectionOverride,
+}: {
+  actor: Actor;
+  compact?: boolean;
+  section?: string;
+}) {
+  const { section: routeSection = "" } = useParams();
+  const section = sectionOverride ?? routeSection;
   const [data, setData] = useState<Record<string, RecordData[]>>({});
   const [selected, setSelected] = useState("");
   const [search, setSearch] = useState("");
@@ -92,27 +101,29 @@ export default function Internal({ actor }: { actor: Actor }) {
     <RecordTable items={items} query={search} status={filter} />
   );
   return (
-    <div className="workspace">
-      <aside>
-        <div className="eyebrow">RUANG KOORDINASI</div>
-        <strong>{actor.role}</strong>
-        <nav>
-          {tabs.map(([path, label]) => (
-            <Link
-              key={path}
-              className={section === path ? "active" : ""}
-              to={"/internal/" + path}
-            >
-              {label === "Vue d’ensemble" ? "Ringkasan" : label}
-            </Link>
-          ))}
-        </nav>
-        <small>
-          Semua data sintetis.
-          <br />
-          Keputusan tetap pada petugas.
-        </small>
-      </aside>
+    <div className={compact ? "workspace compact-workspace" : "workspace"}>
+      {!compact && (
+        <aside>
+          <div className="eyebrow">RUANG KOORDINASI</div>
+          <strong>{actor.role}</strong>
+          <nav>
+            {tabs.map(([path, label]) => (
+              <Link
+                key={path}
+                className={section === path ? "active" : ""}
+                to={"/internal/" + path}
+              >
+                {label === "Vue d’ensemble" ? "Ringkasan" : label}
+              </Link>
+            ))}
+          </nav>
+          <small>
+            Semua data sintetis.
+            <br />
+            Keputusan tetap pada petugas.
+          </small>
+        </aside>
+      )}
       <div className="workspace-content">
         <div className="page-heading">
           <div>
