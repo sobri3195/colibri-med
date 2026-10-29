@@ -18,6 +18,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import type { Actor } from "../types";
+import BrandMark from "../components/BrandMark";
 import type {
   CountGroup,
   LeadershipPeriod,
@@ -194,9 +195,7 @@ export default function Leadership({
           to="/pimpinan"
           aria-label="COLIBRI MED pimpinan"
         >
-          <span className="mobile-logo">
-            <Eye size={24} />
-          </span>
+          <BrandMark />
           <div>
             COLIBRI <b>MED</b>
             <small>PENGAWASAN PIMPINAN</small>

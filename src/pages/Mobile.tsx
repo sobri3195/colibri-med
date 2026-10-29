@@ -21,6 +21,7 @@ import {
   LogOut,
 } from "lucide-react";
 import type { Actor } from "../types";
+import BrandMark from "../components/BrandMark";
 import { mode } from "../services/api";
 import Login from "./Login";
 import Internal from "./Internal";
@@ -64,9 +65,7 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
     <div className="mobile-shell">
       <header className="mobile-header">
         <Link className="brand" to="/mobile" aria-label="COLIBRI MED mobile">
-          <span className="mobile-logo">
-            <Plane size={24} />
-          </span>
+          <BrandMark />
           <div>
             COLIBRI <b>MED</b>
             <small>KOORDINASI MEDIS UDARA</small>
