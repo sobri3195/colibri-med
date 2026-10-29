@@ -1,5 +1,10 @@
-import { useCallback, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useState, useEffect } from "react";
+import {
+  Link,
+  useParams,
+  useSearchParams,
+  useNavigate,
+} from "react-router-dom";
 import { Download, RefreshCw } from "lucide-react";
 import type { Actor, RecordData } from "../types";
 import { call, mode, submit, retry, outboxOwner } from "../services/api";
@@ -22,6 +27,8 @@ import {
 } from "../lib/domain";
 import AsyncState from "../components/AsyncState";
 import LocationMap from "../components/LocationMap";
+import { usePreferences } from "../features/usePreferences";
+import CatalogueManager from "../features/CatalogueManager";
 const tabs = [
   ["", "Vue d’ensemble"],
   ["permohonan", "Permohonan"],
@@ -45,14 +52,23 @@ export default function Internal({
   const { section: routeSection = "" } = useParams();
   const section = sectionOverride ?? routeSection;
   const [data, setData] = useState<Record<string, RecordData[]>>({});
-  const [selected, setSelected] = useState("");
+  const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const selected = params.get("request") ?? "";
+  const setSelected = (id: string) => {
+    const next = new URLSearchParams(params);
+    if (id) next.set("request", id);
+    else next.delete("request");
+    setParams(next, { replace: true });
+  };
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
   const [view, setView] = useState("table");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState<any[]>([]);
   const [archived, setArchived] = useState<any[]>([]);
-  const [interval, setIntervalValue] = useState(30000);
+  const preferences = usePreferences(actor);
+  const interval = preferences.interval;
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -62,9 +78,16 @@ export default function Internal({
     setData(result);
   }, [actor]);
   const poll = usePolling(load, interval);
+  useEffect(() => {
+    setSearch("");
+    setFilter("");
+    setMessage("");
+  }, [section]);
   const requests = data.Requests ?? [];
   const missions = data.Missions ?? [];
-  const request = requests.find((r) => r.id === selected) ?? requests[0];
+  const request = selected
+    ? requests.find((r) => r.id === selected)
+    : requests[0];
   const mission = missions.find((r) => r.requestId === request?.id);
   const allowed = (...r: string[]) =>
     actor.role === "Administrator" || r.includes(actor.role);
@@ -80,7 +103,13 @@ export default function Internal({
       return null;
     } finally {
       setBusy(false);
-      setPending(await outbox(outboxOwner(actor)));
+      try {
+        setPending(await outbox(outboxOwner(actor)));
+      } catch {
+        setMessage(
+          "Outbox lokal belum dapat dibaca. Periksa penyimpanan perangkat.",
+        );
+      }
     }
   };
   const filtered = (rows: RecordData[]) =>
@@ -97,8 +126,32 @@ export default function Internal({
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  const rows = (items: RecordData[]) => (
-    <RecordTable items={items} query={search} status={filter} />
+  const openRequest = (id: string) => {
+    navigate(
+      (compact
+        ? section === "misi"
+          ? "/mobile/misi"
+          : "/mobile/operasi/permohonan"
+        : section === "misi"
+          ? "/internal/misi"
+          : "/internal/permohonan") +
+        "?" +
+        new URLSearchParams({ request: id }),
+    );
+    requestAnimationFrame(() =>
+      document
+        .getElementById("request-workspace")
+        ?.scrollIntoView({ block: "start" }),
+    );
+  };
+  const rows = (items: RecordData[], onOpen?: (r: RecordData) => void) => (
+    <RecordTable
+      items={items}
+      query={search}
+      status={filter}
+      compact={compact}
+      onOpen={onOpen}
+    />
   );
   return (
     <div className={compact ? "workspace compact-workspace" : "workspace"}>
@@ -141,7 +194,11 @@ export default function Internal({
               · polling {interval / 1000} detik
             </small>
           </div>
-          <button className="secondary" onClick={() => void poll.refresh()}>
+          <button
+            className="secondary"
+            disabled={poll.loading}
+            onClick={() => void poll.refresh()}
+          >
             <RefreshCw size={16} /> Refresh
           </button>
         </div>
@@ -189,7 +246,12 @@ export default function Internal({
         {section === "permohonan" && (
           <section className="card">
             <h2>Daftar permohonan</h2>
-            {rows(requests)}
+            {compact && (
+              <Link className="button" to="/mobile/permohonan">
+                Buat permohonan baru
+              </Link>
+            )}
+            {rows(requests, (r) => openRequest(r.id))}
           </section>
         )}
         {section === "misi" && (
@@ -203,7 +265,7 @@ export default function Internal({
               </button>
             </div>
             {view === "table" ? (
-              rows(missions)
+              rows(missions, (r) => openRequest(String(r.requestId)))
             ) : (
               <div className="kanban">
                 {[...missionStages, "Dibatalkan"].map((s) => (
@@ -215,6 +277,12 @@ export default function Internal({
                         <article className="card" key={m.id}>
                           <strong>{String(m.team)}</strong>
                           <p>{m.id.slice(0, 8)}</p>
+                          <button
+                            className="secondary"
+                            onClick={() => openRequest(String(m.requestId))}
+                          >
+                            Buka permohonan
+                          </button>
                         </article>
                       ))}
                   </div>
@@ -224,14 +292,23 @@ export default function Internal({
           </section>
         )}
         {["permohonan", "misi", "penilaian"].includes(section) && (
-          <section className="card">
+          <section className="card" id="request-workspace">
             <h2>Ruang kerja permohonan</h2>
+            {selected && !request && !poll.loading && (
+              <p role="alert">
+                Permohonan yang dipilih tidak ditemukan. Pilih record lain;
+                tidak ada perubahan yang dikirim.
+              </p>
+            )}
             <label>
               Pilih permohonan
               <select
                 value={request?.id ?? ""}
                 onChange={(e) => setSelected(e.target.value)}
               >
+                <option value="" disabled>
+                  Pilih permohonan
+                </option>
                 {requests.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.id.slice(0, 8)} · {String(r.facility)}
@@ -239,6 +316,14 @@ export default function Internal({
                 ))}
               </select>
             </label>
+            {!request && !selected && !poll.loading && (
+              <p className="empty">
+                Belum ada permohonan.{" "}
+                {compact && (
+                  <Link to="/mobile/permohonan">Buat permohonan simulasi</Link>
+                )}
+              </p>
+            )}
             {request && (
               <>
                 <p>
@@ -372,7 +457,9 @@ export default function Internal({
                               ? "MedicalReviews"
                               : group === "flightReviews"
                                 ? "FlightReviews"
-                                : ""
+                                : group === "checklists"
+                                  ? "Checklists"
+                                  : ""
                           ] ?? []
                         )
                           .filter((r) => r.requestId === request.id)
@@ -436,8 +523,16 @@ export default function Internal({
             />
             <h2>Daftar lokasi sintetis</h2>
             {rows(data.Facilities ?? [])}
+            {actor.role === "Administrator" && (
+              <CatalogueManager
+                kind="facilities"
+                records={data.Facilities ?? []}
+                busy={busy}
+                act={act}
+              />
+            )}
             <h3>Lokasi permohonan sintetis</h3>
-            {rows(requests)}
+            {rows(requests, (r) => openRequest(r.id))}
             {request &&
               request.lat !== "" &&
               request.lng !== "" &&
@@ -457,6 +552,14 @@ export default function Internal({
           <section className="card">
             <h2>Kesiapan sumber daya sintetis</h2>
             {rows(data.Resources ?? [])}
+            {actor.role === "Administrator" && (
+              <CatalogueManager
+                kind="resources"
+                records={data.Resources ?? []}
+                busy={busy}
+                act={act}
+              />
+            )}
             {allowed("Operator") &&
               (data.Resources ?? []).map((r) => (
                 <form
@@ -672,13 +775,24 @@ export default function Internal({
               Interval polling
               <select
                 value={interval}
-                onChange={(e) => setIntervalValue(Number(e.target.value))}
+                onChange={(e) =>
+                  void preferences.change(Number(e.target.value))
+                }
               >
                 <option value={30000}>30 detik</option>
                 <option value={60000}>60 detik</option>
                 <option value={120000}>120 detik</option>
               </select>
             </label>
+            {preferences.error ? (
+              <p role="alert">{preferences.error}</p>
+            ) : (
+              <p role="status">
+                {preferences.saving
+                  ? "Menyimpan pengaturan…"
+                  : "Pengaturan tersimpan untuk pengguna ini pada perangkat dan mode yang sama."}
+              </p>
+            )}
             <p>
               Polling berhenti ketika tab tersembunyi atau perangkat offline.
               Backoff diterapkan saat gagal.

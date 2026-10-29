@@ -77,7 +77,7 @@ test("mobile protected destinations return after login and account exposes all m
     page.getByRole("heading", { name: "Ruang kerja permohonan" }),
   ).toBeVisible();
   await expect(
-    nav.getByRole("link", { name: "Akun", exact: true }),
+    nav.getByRole("link", { name: "Permohonan", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await nav.getByRole("link", { name: "Peta", exact: true }).click();
   await expect(

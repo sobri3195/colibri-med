@@ -491,6 +491,105 @@ a:focus-visible {
 .workspace aside {
   min-width: 0;
 }
+.mobile-record-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.mobile-record {
+  border: 1px solid #dfe8ef;
+  border-radius: 10px;
+  padding: 14px;
+  background: #f9fbfd;
+  min-width: 0;
+}
+.mobile-record > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.mobile-record strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.mobile-record small {
+  display: block;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.mobile-record p {
+  font-size: 12px;
+  margin: 10px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mobile-record button {
+  margin-top: 12px;
+  font-size: 12px;
+  min-height: 44px;
+}
+.submission-history {
+  margin: 24px 0;
+}
+.submission-history h2 {
+  font-size: 19px;
+}
+.submission-history > div {
+  border: 1px solid #e0e8ef;
+  border-radius: 9px;
+  padding: 14px;
+  margin: 12px 0;
+  background: #f8fbfc;
+}
+.submission-history small {
+  display: block;
+  margin: 8px 0;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.submission-history > p {
+  font-size: 12px;
+  color: #6b7e90;
+}
+.coordination-checklist {
+  border: 1px solid #d9e5ee;
+  border-radius: 8px;
+  padding: 14px;
+  margin: 18px 0;
+  min-width: 0;
+}
+.coordination-checklist legend {
+  font-size: 13px;
+  font-weight: 650;
+  padding: 0 5px;
+}
+.coordination-checklist .checklist-item {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: flex-start;
+  min-height: 44px;
+  font-weight: 500;
+  font-size: 13px;
+}
+.checklist-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: #087f83;
+}
+.catalogue-manager {
+  margin-top: 20px;
+}
+.catalogue-manager > label {
+  margin-top: 16px;
+}
+#request-workspace {
+  scroll-margin-top: 16px;
+}
 
 .leadership-heading {
   display: flex;
@@ -1302,4 +1401,33 @@ a:focus-visible {
   .bottom-link {
     font-size: 9px;
   }
+}
+
+.mobile-connection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  color: #526d7c;
+  padding: 8px 2px;
+  margin-bottom: 7px;
+}
+.mobile-connection > span:before {
+  content: "●";
+  color: #087f83;
+  margin-right: 7px;
+}
+.mobile-connection.offline {
+  color: #896326;
+}
+.mobile-connection.offline > span:before {
+  color: #b88631;
+}
+.mobile-connection > a {
+  color: #087f83;
+  text-decoration: underline;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
 }

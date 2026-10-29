@@ -2,7 +2,15 @@ import { useState } from "react";
 import type { Actor, RecordData } from "../types";
 import { mode } from "../services/api";
 import { getLocal, putLocal } from "../services/storage";
-type Fields = { text: string; status: string; reason: string };
+import { checklistItems } from "../lib/domain";
+import { date } from "../lib/domain";
+import { Link, useLocation } from "react-router-dom";
+type Fields = {
+  text: string;
+  status: string;
+  reason: string;
+  items?: Record<string, boolean>;
+};
 export default function OperationalForm({
   actor,
   request,
@@ -25,6 +33,11 @@ export default function OperationalForm({
   notice: (message: string) => void;
 }) {
   const review = group.includes("Reviews");
+  const location = useLocation();
+  const [queued, setQueued] = useState(false);
+  const editable = review || group === "checklists";
+  const emptyItems = () =>
+    Object.fromEntries(checklistItems.map((item) => [item.id, false]));
   const initial = (r?: RecordData): Fields => ({
     text: String(r?.text ?? ""),
     status: String(
@@ -36,18 +49,32 @@ export default function OperationalForm({
             : "Dicatat"),
     ),
     reason: String(r?.reason ?? ""),
+    ...(group === "checklists"
+      ? {
+          items: {
+            ...emptyItems(),
+            ...((r?.items as Record<string, boolean>) ?? {}),
+          },
+        }
+      : {}),
   });
   const [snapshot, setSnapshot] = useState(current);
   const [fields, setFields] = useState(() => initial(current));
   const key = mode + ":" + actor.id + ":" + request.id + ":" + group;
   const changed =
-    review &&
+    editable &&
     !!current &&
     (current.revision > (snapshot?.revision ?? 0) ||
       current.id !== snapshot?.id);
   return (
     <details>
       <summary>{title}</summary>
+      {editable && snapshot && (
+        <p className="form-version" role="status">
+          Versi server yang ditinjau: revision {snapshot.revision} ·{" "}
+          {date(snapshot.updatedAt)}
+        </p>
+      )}
       {changed && (
         <div role="alert" className="notice">
           Penilaian di server telah berubah. Draft Anda dipertahankan.{" "}
@@ -68,32 +95,69 @@ export default function OperationalForm({
           const result = await act(
             group + (group === "patientNotes" ? ".create" : ".save"),
             {
-              ...(review && snapshot
+              ...(editable && snapshot
                 ? { id: snapshot.id, baseRevision: snapshot.revision }
                 : {}),
               data: {
                 requestId: request.id,
                 missionId: mission?.id,
                 ...fields,
+                ...(group === "checklists"
+                  ? {
+                      items: fields.items ?? emptyItems(),
+                      text:
+                        fields.text.trim() || "Checklist koordinasi simulasi",
+                    }
+                  : {}),
               },
             },
           );
-          if (result && !result.queued && review) {
+          if (result && !result.queued && editable) {
             setSnapshot(result);
             setFields(initial(result));
           }
+          if (result && !result.queued && !editable) setFields(initial());
+          if (result?.queued) setQueued(true);
         }}
       >
         <label>
           Catatan sintetis
           <textarea
             name="text"
-            required
+            required={group !== "checklists"}
             maxLength={2000}
             value={fields.text}
             onChange={(e) => setFields({ ...fields, text: e.target.value })}
           />
         </label>
+        {group === "checklists" && (
+          <fieldset className="coordination-checklist">
+            <legend>Checklist koordinasi simulasi</legend>
+            {checklistItems.map((item) => (
+              <label className="checklist-item" key={item.id}>
+                <input
+                  type="checkbox"
+                  checked={fields.items?.[item.id] ?? false}
+                  onChange={(e) =>
+                    setFields({
+                      ...fields,
+                      items: {
+                        ...emptyItems(),
+                        ...fields.items,
+                        [item.id]: e.target.checked,
+                      },
+                    })
+                  }
+                />
+                {item.label}
+              </label>
+            ))}
+            <small>
+              Bukan checklist penerbangan resmi. Centang tidak memberi
+              persetujuan medis atau penerbangan.
+            </small>
+          </fieldset>
+        )}
         {review && (
           <label>
             Status
@@ -128,7 +192,7 @@ export default function OperationalForm({
           </label>
         )}
         <div className="actions">
-          <button disabled={busy || (!mission && !review)}>
+          <button disabled={busy || queued || (!mission && !review)}>
             Catat {title.toLowerCase()}
           </button>
           <button
@@ -172,6 +236,22 @@ export default function OperationalForm({
             Muat draft
           </button>
         </div>
+        {queued && (
+          <p className="notice" role="status">
+            Operasi menunggu pengiriman.{" "}
+            <Link
+              to={
+                (location.pathname.startsWith("/mobile")
+                  ? "/mobile/operasi/outbox"
+                  : "/internal/outbox") +
+                "?" +
+                new URLSearchParams({ request: request.id })
+              }
+            >
+              Buka Outbox untuk mengirim ulang
+            </Link>
+          </p>
+        )}
       </form>
     </details>
   );

@@ -137,11 +137,6 @@ test("operator cannot open leadership data and viewer is redirected from raw int
     page.getByRole("link", { name: "Kelola permohonan" }),
   ).toHaveCount(0);
   await page.goto("/internal/permohonan");
-  await expect(page).toHaveURL(/\/login$/);
-  await page
-    .getByRole("combobox", { name: "Peran demo" })
-    .selectOption("Viewer pimpinan");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
   await expect(page).toHaveURL(/\/pimpinan$/);
   await expect(
     page.getByRole("combobox", { name: "Sudut pantau" }),

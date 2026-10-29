@@ -120,6 +120,90 @@ function runtime() {
   };
 }
 describe("actual Apps Script dispatcher against in-memory Sheets", () => {
+  it("persists facility/resource CRUD and structured checklists through the Apps Script action allowlist", () => {
+    const r = runtime();
+    const token = "e".repeat(64);
+    const requestId = randomUUID(),
+      missionId = randomUUID();
+    r.run(
+      `write_('Users',[base_({id:'admin-test',name:'Admin',role:'Administrator'})]);write_('Sessions',[base_({userId:'admin-test',tokenHash:digest_('${token}'),expiresAt:new Date(Date.now()+600000).toISOString()})]);write_('Requests',[base_({id:'${requestId}',status:'Dalam Koordinasi'})]);write_('Missions',[base_({id:'${missionId}',requestId:'${requestId}',status:'Persiapan',team:'Tim awal'})]);`,
+    );
+    const p = {
+      id: randomUUID(),
+      operationId: randomUUID(),
+      data: {
+        name: "Fasilitas Baru",
+        location: "Lokasi contoh",
+        lat: -6,
+        lng: 106,
+        status: "Perlu konfirmasi",
+      },
+    };
+    expect(r.post("facilities.create", p, { sessionToken: token }).ok).toBe(
+      true,
+    );
+    expect(r.post("facilities.create", p, { sessionToken: token }).ok).toBe(
+      true,
+    );
+    expect(r.sheets.get("Facilities")).toHaveLength(4);
+    expect(
+      r.post(
+        "facilities.update",
+        {
+          id: p.id,
+          operationId: randomUUID(),
+          baseRevision: 1,
+          data: { ...p.data, name: "Fasilitas Diubah" },
+        },
+        { sessionToken: token },
+      ).data.revision,
+    ).toBe(2);
+    expect(
+      r.post(
+        "resources.create",
+        {
+          operationId: randomUUID(),
+          data: {
+            name: "Tim Contoh",
+            category: "Personel",
+            status: "Perlu konfirmasi",
+          },
+        },
+        { sessionToken: token },
+      ).ok,
+    ).toBe(true);
+    expect(
+      r.post(
+        "missions.reassign",
+        {
+          id: missionId,
+          operationId: randomUUID(),
+          baseRevision: 1,
+          team: "Tim pengganti",
+          reason: "Alasan simulasi",
+        },
+        { sessionToken: token },
+      ).data.team,
+    ).toBe("Tim pengganti");
+    const items = {
+      request: true,
+      coordination: true,
+      facility: false,
+      documentation: true,
+      handover: false,
+    };
+    expect(
+      r.post(
+        "checklists.save",
+        {
+          operationId: randomUUID(),
+          data: { requestId, missionId, text: "Checklist contoh", items },
+        },
+        { sessionToken: token },
+      ).data.items,
+    ).toEqual(items);
+    expect(r.sheets.get("Checklists")).toHaveLength(2);
+  });
   it("serves leadership aggregates without reading clinical sheets or exposing raw records", () => {
     const r = runtime();
     const token = "d".repeat(64);

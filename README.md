@@ -59,3 +59,13 @@ Buka `/pimpinan` untuk pengawasan mobile dengan bottom navigation **Ringkasan, O
 Sudut pantau **Kasau, Kemenhan, Kemenkes, Presiden** mengatur fokus indikator atas data yang sama; bukan autentikasi jabatan atau dashboard resmi pemerintah. Ringkasan meliputi beban permohonan, status misi, kesiapan sintetis, penilaian/tinjauan tertunda, serah terima dan kualitas data. Filter memakai kohor hari kalender UTC; snapshot kesiapan tetap seluruh data. Semua data sintetis, tidak ada cakupan atau indikator resmi yang dikarang.
 
 Endpoint `leadership.summary` hanya mengirim agregat tanpa identitas, kontak, koordinat atau catatan pasien. Viewer kini hanya dapat membaca agregat; akses endpoint rinci/mutasi ditolak server. CSV/PDF mengikuti proyeksi yang sama. Dashboard hanya untuk pemantauan, tidak melakukan keputusan medis atau persetujuan penerbangan.
+
+## Alur mobile lengkap
+
+Di `/mobile`, menu **Permohonan** membuka daftar kerja setelah petugas login, dengan tombol **Buat permohonan baru**. Pengguna publik tetap membuka form simulasi. Daftar mobile memakai kartu yang dapat dibuka; ID permohonan di URL ikut terbawa antara Misi, Peta, Akun dan modul kerja. URL permohonan yang tidak ditemukan menampilkan error dan tidak memilih record lain diam-diam.
+
+Permohonan menyediakan draft, pengiriman offline, kirim ulang, serta bukti pencatatan lokal minimal. Bukti tersebut bukan status misi terbaru atau bukti bantuan ditugaskan. Sesi **demo** dipertahankan dalam tab saat reload dengan batas satu jam yang tidak diperpanjang oleh reload; ini tetap simulasi peran, bukan autentikasi connected. Mode connected hanya memakai cookie server.
+
+Checklist memiliki lima butir koordinasi sintetis yang dapat dicentang dan disimpan dengan revision. Penugasan tim dapat diubah sebelum keberangkatan dengan alasan. Administrator dapat menambah/memperbarui fasilitas dan sumber daya; Operator tetap hanya memperbarui kesiapan. Menonaktifkan direktori memakai status, tanpa menghapus riwayat. Pengaturan polling tersimpan per mode dan pengguna pada perangkat.
+
+Lihat [panduan uji semua menu mobile](docs/MOBILE-WORKFLOW.md) untuk alur dari permohonan hingga laporan. Semua fungsi diverifikasi dalam demo dan adapter Apps Script mock; koneksi Google Sheets/Vercel nyata memerlukan konfigurasi deployment dan belum diklaim berhasil.

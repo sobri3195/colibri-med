@@ -1,5 +1,33 @@
 import { z } from "zod";
 import type { RecordData } from "../types";
+const coordinate = (min: number, max: number) =>
+  z
+    .union([z.number(), z.string().trim().min(1)])
+    .transform(Number)
+    .pipe(z.number().min(min).max(max));
+export const facilitySchema = z.object({
+  name: z.string().trim().min(3).max(150),
+  location: z.string().trim().min(3).max(300),
+  lat: coordinate(-90, 90),
+  lng: coordinate(-180, 180),
+  status: z.enum([
+    "Perlu konfirmasi",
+    "Tersedia simulasi",
+    "Tidak tersedia simulasi",
+  ]),
+});
+export const resourceSchema = z.object({
+  name: z.string().trim().min(3).max(150),
+  category: z.enum(["Personel", "Peralatan", "Dukungan"]),
+  status: z.enum(["Perlu konfirmasi", "Siap simulasi", "Tidak siap simulasi"]),
+});
+export const checklistItems = [
+  { id: "request", label: "Permohonan dan identitas sintetis diperiksa" },
+  { id: "coordination", label: "Koordinasi tim dicatat" },
+  { id: "facility", label: "Fasilitas penerima dikonfirmasi oleh petugas" },
+  { id: "documentation", label: "Dokumen simulasi dan catatan disiapkan" },
+  { id: "handover", label: "Rencana serah terima dikoordinasikan" },
+] as const;
 export function summaryCounts(data: Record<string, RecordData[]>) {
   const requests = data.Requests ?? [];
   const missions = data.Missions ?? [];

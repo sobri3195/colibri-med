@@ -1,6 +1,6 @@
 import type { Actor, Operation, Result } from "../types";
 import { demoCall } from "./demo";
-import { queue, outbox, dequeue } from "./storage";
+import { queue, outbox, dequeue, saveReceipt } from "./storage";
 import { ApiError, blockedDelivery, deliveryStatus } from "../lib/errors";
 export const mode =
   import.meta.env.VITE_APP_MODE === "connected" ? "connected" : "demo";
@@ -69,6 +69,7 @@ export async function submit(
   if (!navigator.onLine || pending.length) return { queued: true };
   try {
     const result = await call(action, op.payload, actor);
+    await saveReceipt(owner, op, result);
     await dequeue(owner, op.operationId);
     return result;
   } catch (e) {
@@ -81,6 +82,7 @@ export async function submit(
 export async function retry(actor: Actor | null) {
   const owner = outboxOwner(actor);
   const run = async () => {
+    let sent = 0;
     if (!navigator.onLine)
       throw new ApiError("NETWORK", "Perangkat sedang offline");
     // Check the live cookie before replaying any internal connected operation.
@@ -102,8 +104,10 @@ export async function retry(actor: Actor | null) {
         );
       try {
         await queue(owner, { ...op, status: "Mengirim" });
-        await call(op.action, op.payload, actor);
+        const result = await call(op.action, op.payload, actor);
+        await saveReceipt(owner, op, result);
         await dequeue(owner, op.operationId);
+        sent++;
       } catch (e) {
         await queue(owner, {
           ...op,
@@ -113,6 +117,7 @@ export async function retry(actor: Actor | null) {
         throw e;
       }
     }
+    return { sent, remaining: (await outbox(owner)).length };
   };
   return navigator.locks
     ? navigator.locks.request("colibri-outbox:" + owner, run)

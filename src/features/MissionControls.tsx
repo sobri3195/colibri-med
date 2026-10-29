@@ -30,6 +30,38 @@ export default function MissionControls({
         </label>
         <button disabled={busy}>Misi → {next}</button>
       </form>
+      {["Persiapan", "Tim Ditugaskan"].includes(mission.status) && (
+        <details>
+          <summary>Ubah tim sebelum keberangkatan</summary>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const form = new FormData(e.currentTarget);
+              void act("missions.reassign", {
+                id: mission.id,
+                baseRevision: mission.revision,
+                team: form.get("team"),
+                reason: form.get("reason"),
+              });
+            }}
+          >
+            <label>
+              Nama tim pengganti
+              <input
+                name="team"
+                required
+                maxLength={150}
+                defaultValue={String(mission.team ?? "")}
+              />
+            </label>
+            <label>
+              Alasan perubahan tim
+              <textarea name="reason" required maxLength={500} />
+            </label>
+            <button disabled={busy}>Simpan penugasan tim</button>
+          </form>
+        </details>
+      )}
       <details>
         <summary>Pembatalan misi simulasi</summary>
         <form

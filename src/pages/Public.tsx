@@ -1,11 +1,19 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Plane, ShieldCheck, ClipboardList } from "lucide-react";
 import LocationMap from "../components/LocationMap";
 import { requestSchema } from "../lib/domain";
-import { submit, retry, mode } from "../services/api";
+import { submit, retry, mode, outboxOwner } from "../services/api";
 import type { Actor } from "../types";
-import { getLocal, putLocal } from "../services/storage";
+import {
+  getLocal,
+  putLocal,
+  receipts,
+  outbox,
+  archiveOperation,
+} from "../services/storage";
+import { date } from "../lib/domain";
+import { errorCode } from "../lib/errors";
 export function Home() {
   return (
     <>
@@ -121,6 +129,21 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
   const [form, setForm] = useState(empty);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [pending, setPending] = useState<any[]>([]);
+  const owner = outboxOwner(actor);
+  const refreshLocal = useCallback(async () => {
+    setHistory(await receipts(owner));
+    setPending(
+      (await outbox(owner)).filter((op) => op.action === "requests.create"),
+    );
+  }, [owner]);
+  useEffect(() => {
+    void refreshLocal().catch(() =>
+      setNotice("Riwayat lokal belum dapat dibaca."),
+    );
+  }, [refreshLocal]);
   const pick = useCallback(
     (lat: number, lng: number) =>
       setForm((f) => ({
@@ -142,6 +165,16 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
       setNotice("Penyimpanan browser tidak tersedia.");
     }
   };
+  if (actor?.role === "Viewer pimpinan")
+    return (
+      <section className="card">
+        <h1>Akun pengawasan hanya baca</h1>
+        <p>Gunakan akun operator untuk mengirim permohonan simulasi.</p>
+        <Link className="button" to="/pimpinan">
+          Buka pengawasan pimpinan
+        </Link>
+      </section>
+    );
   return (
     <section className="card">
       <div className="eyebrow">PERMOHONAN SIMULASI</div>
@@ -157,6 +190,8 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
           try {
             const p = requestSchema.parse(form);
             const r = await submit(actor, "requests.create", { data: p });
+            setSubmitted(true);
+            await refreshLocal();
             setNotice(
               r.queued
                 ? "Menunggu jaringan — tersimpan di outbox lokal."
@@ -167,7 +202,20 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
                     ". Belum diterima operator dan belum ada penugasan.",
             );
           } catch (e) {
-            setNotice(String(e));
+            if (e && typeof e === "object" && "issues" in e)
+              setNotice(
+                "Periksa isian: nama/fasilitas/lokasi wajib, jumlah pasien 1–100, dan koordinat harus berpasangan.",
+              );
+            else {
+              setNotice(String(e));
+              if (
+                ["NETWORK", "UPSTREAM", "BUSY", "PARTIAL_FAILURE"].includes(
+                  errorCode(e),
+                )
+              )
+                setSubmitted(true);
+            }
+            await refreshLocal().catch(() => {});
           } finally {
             setBusy(false);
           }
@@ -188,7 +236,43 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
               {label}
               <input
                 required={!["lat", "lng", "access"].includes(key)}
-                type={key === "patients" ? "number" : "text"}
+                type={
+                  ["patients", "lat", "lng"].includes(key) ? "number" : "text"
+                }
+                min={
+                  key === "patients"
+                    ? 1
+                    : key === "lat"
+                      ? -90
+                      : key === "lng"
+                        ? -180
+                        : undefined
+                }
+                max={
+                  key === "patients"
+                    ? 100
+                    : key === "lat"
+                      ? 90
+                      : key === "lng"
+                        ? 180
+                        : undefined
+                }
+                step={
+                  key === "patients"
+                    ? 1
+                    : ["lat", "lng"].includes(key)
+                      ? "any"
+                      : undefined
+                }
+                maxLength={
+                  key === "name" || key === "contact"
+                    ? 100
+                    : key === "facility"
+                      ? 150
+                      : key === "location"
+                        ? 300
+                        : 500
+                }
                 value={form[key as keyof typeof form]}
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
               />
@@ -234,7 +318,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
           Gunakan Lokasi Saya
         </button>
         <div className="actions">
-          <button disabled={busy} type="submit">
+          <button disabled={busy || submitted} type="submit">
             {busy ? "Mengirim…" : "Kirim permohonan simulasi"}
           </button>
           <button className="secondary" type="button" onClick={save}>
@@ -261,6 +345,26 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
         </div>
       </form>
       <p role="status">{notice}</p>
+      {submitted && (
+        <div className="notice">
+          <p>
+            Pengiriman ini sudah diproses atau masuk antrean. Gunakan kirim
+            ulang untuk operasi yang sama agar tidak menggandakan permohonan.
+          </p>
+          <button
+            className="secondary"
+            onClick={() => {
+              setForm({ ...empty });
+              setSubmitted(false);
+              setNotice(
+                "Form baru. Permohonan sebelumnya tetap tercatat atau berada di outbox.",
+              );
+            }}
+          >
+            Mulai permohonan baru
+          </button>
+        </div>
+      )}
       <button
         disabled={busy}
         className="secondary"
@@ -271,19 +375,92 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
               setNotice("Menunggu jaringan.");
               return;
             }
-            await retry(actor);
+            const result = await retry(actor);
+            await refreshLocal();
             setNotice(
-              "Operasi outbox terkirim. Muat data terbaru untuk memeriksa status; belum berarti bantuan ditugaskan.",
+              result.sent
+                ? result.sent +
+                    " operasi outbox terkirim. Belum berarti bantuan ditugaskan."
+                : "Tidak ada operasi yang menunggu pengiriman.",
             );
           } catch (e) {
             setNotice(String(e));
           } finally {
             setBusy(false);
+            await refreshLocal().catch(() => {});
           }
         }}
       >
         Kirim ulang outbox saya
       </button>
+      {!!pending.length && (
+        <section className="submission-history">
+          <h2>Pengiriman tertunda saya</h2>
+          {pending.map((p) => (
+            <div key={p.operationId}>
+              <strong>{p.status}</strong>
+              <small>
+                Operasi {p.operationId.slice(0, 8)} · percobaan {p.retryCount}
+              </small>
+              {["Konflik perubahan", "Perlu ditinjau"].includes(p.status) && (
+                <button
+                  className="secondary"
+                  onClick={async () => {
+                    try {
+                      await archiveOperation(owner, p.operationId);
+                      await refreshLocal();
+                      setSubmitted(false);
+                      setNotice(
+                        "Operasi ditolak diarsipkan; periksa dan perbaiki data sebelum membuat pengiriman baru.",
+                      );
+                    } catch (e) {
+                      setNotice(String(e));
+                    }
+                  }}
+                >
+                  Arsipkan setelah ditinjau
+                </button>
+              )}
+              {p.status === "Perlu rekonsiliasi" && (
+                <p>
+                  Hubungi administrator dengan ID operasi; jangan membuat
+                  operasi pengganti.
+                </p>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
+      {!!history.length && (
+        <section className="submission-history">
+          <h2>Bukti pencatatan saya</h2>
+          <p>
+            Salinan lokal penerimaan, bukan status misi terkini atau bukti
+            penugasan.
+          </p>
+          {history.map((r) => (
+            <div key={r.operationId}>
+              <strong>
+                {mode === "demo"
+                  ? "Tercatat di demo lokal"
+                  : "Tercatat di server"}
+              </strong>
+              <small>
+                Referensi {r.id.slice(0, 8)} · {date(r.recordedAt)}
+              </small>
+              <Link
+                className="button secondary"
+                to={
+                  "/mobile/operasi/permohonan?" +
+                  new URLSearchParams({ request: r.id })
+                }
+              >
+                Buka melalui akun petugas
+              </Link>
+            </div>
+          ))}
+        </section>
+      )}
       <small>
         Data browser dapat dihapus perangkat dan dibatasi kapasitas. Pengiriman
         tidak berjalan saat browser ditutup.
