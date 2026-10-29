@@ -13,6 +13,7 @@ import { Plane } from "lucide-react";
 import { Home, Info, RequestForm } from "./pages/Public";
 import Login from "./pages/Login";
 import Internal from "./pages/Internal";
+import Leadership from "./pages/Leadership";
 import {
   MobileLayout,
   MobileHome,
@@ -30,8 +31,11 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = /^\/mobile(?:\/|$)/.test(location.pathname);
+  const isLeadership = /^\/pimpinan(?:\/|$)/.test(location.pathname);
   const mobileRef = useRef(isMobile);
   mobileRef.current = isMobile;
+  const leadershipRef = useRef(isLeadership);
+  leadershipRef.current = isLeadership;
   const onLogin = (a: Actor) => {
     setError("");
     setActor(a);
@@ -41,7 +45,13 @@ function App() {
       if (mode === "connected") await call("auth.logout");
       setActor(null);
       setError("");
-      navigate(mobileRef.current ? "/mobile/akun" : "/login");
+      navigate(
+        leadershipRef.current
+          ? "/pimpinan"
+          : mobileRef.current
+            ? "/mobile/akun"
+            : "/login",
+      );
     } catch (e) {
       setError(String(e));
     }
@@ -58,7 +68,13 @@ function App() {
     const expired = () => {
       setActor(null);
       setError("Sesi kedaluwarsa. Masuk kembali untuk mengirim operasi.");
-      navigate(mobileRef.current ? "/mobile/login" : "/login");
+      navigate(
+        leadershipRef.current
+          ? "/pimpinan"
+          : mobileRef.current
+            ? "/mobile/login"
+            : "/login",
+      );
     };
     window.addEventListener("colibri-session-expired", expired);
     return () => window.removeEventListener("colibri-session-expired", expired);
@@ -69,19 +85,33 @@ function App() {
       () => {
         setActor(null);
         setError("Sesi kedaluwarsa. Masuk kembali untuk mengirim operasi.");
-        navigate(mobileRef.current ? "/mobile/login" : "/login");
+        navigate(
+          leadershipRef.current
+            ? "/pimpinan"
+            : mobileRef.current
+              ? "/mobile/login"
+              : "/login",
+        );
       },
       60 * 60 * 1000,
     );
     return () => clearTimeout(timer);
   }, [actor, navigate]);
   return (
-    <div className={isMobile ? "app-shell mobile-app" : "app-shell"}>
+    <div
+      className={
+        isLeadership
+          ? "app-shell mobile-app leadership-app"
+          : isMobile
+            ? "app-shell mobile-app"
+            : "app-shell"
+      }
+    >
       <div className="simulation">
         PROTOTIPE SIMULASI — DATA SINTETIS{" "}
         <span>MODE {mode.toUpperCase()}</span>
       </div>
-      {!isMobile && (
+      {!isMobile && !isLeadership && (
         <header>
           <Link className="brand" to="/">
             <Plane size={30} />
@@ -95,7 +125,13 @@ function App() {
             <Link to="/permohonan">Permohonan</Link>
             {actor ? (
               <>
-                <Link to="/internal">Dashboard</Link>
+                <Link
+                  to={
+                    actor.role === "Viewer pimpinan" ? "/pimpinan" : "/internal"
+                  }
+                >
+                  Dashboard
+                </Link>
                 <button className="secondary" onClick={() => void logout()}>
                   Keluar
                 </button>
@@ -115,6 +151,17 @@ function App() {
       )}
       <main>
         <Routes>
+          <Route
+            path="/pimpinan/:section?"
+            element={
+              <Leadership
+                actor={actor}
+                checking={checking}
+                logout={logout}
+                onLogin={onLogin}
+              />
+            }
+          />
           <Route path="/mobile" element={<MobileLayout actor={actor} />}>
             <Route index element={<MobileHome actor={actor} />} />
             <Route
@@ -181,6 +228,8 @@ function App() {
             element={
               checking ? (
                 <p role="status">Memeriksa sesi…</p>
+              ) : actor?.role === "Viewer pimpinan" ? (
+                <Navigate to="/pimpinan" replace />
               ) : actor ? (
                 <Internal key={actor.id} actor={actor} />
               ) : (
@@ -199,7 +248,7 @@ function App() {
           />
         </Routes>
       </main>
-      {!isMobile && (
+      {!isMobile && !isLeadership && (
         <footer>
           <strong>COLIBRI MED</strong>
           <p>

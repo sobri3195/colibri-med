@@ -28,6 +28,7 @@ export const actions = new Set([
   "handovers.save",
   "handovers.list",
   "reports.summary",
+  "leadership.summary",
   "activity.list",
 ]);
 const MAX = 32768;

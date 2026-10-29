@@ -20454,6 +20454,147 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     );
   }
 
+  // src/lib/leadership.ts
+  function buildLeadershipSummary(tables2, payload = {}, now = Date.now()) {
+    const period = payload.period === void 0 ? "all" : payload.period;
+    if (!["all", "7", "30"].includes(String(period)) || typeof period !== "string")
+      throw Error("VALIDATION: Periode pengawasan tidak valid");
+    const utcMidnight = Date.parse(
+      new Date(now).toISOString().slice(0, 10) + "T00:00:00Z"
+    );
+    const cutoff = period === "all" ? null : utcMidnight - (Number(period) - 1) * 864e5;
+    const cohort = (rows) => rows.filter(
+      (r) => cutoff === null || Date.parse(r.createdAt) >= cutoff && Date.parse(r.createdAt) <= now
+    );
+    const allRequests = tables2.Requests ?? [], allMissions = tables2.Missions ?? [], handovers = tables2.HandoverRecords ?? [];
+    const requests = cohort(allRequests), missions = cohort(allMissions);
+    const open2 = requests.filter((r) => r.status !== "Ditutup");
+    const active = (rows) => rows.filter((m) => missionStages.slice(0, -1).includes(m.status));
+    const requestIds = new Set(allRequests.map((r) => r.id));
+    const missionIds = new Set(allMissions.map((r) => r.id));
+    const latest = (table, id) => (tables2[table] ?? []).filter((r) => r.requestId === id).at(-1)?.status;
+    const flight = open2.map((r) => latest("FlightReviews", r.id));
+    const distribution = (rows, known) => {
+      const groups = known.map((label) => ({
+        label,
+        count: rows.filter((r) => r.status === label).length
+      }));
+      const unknown2 = rows.filter((r) => !known.includes(r.status)).length;
+      return unknown2 ? [...groups, { label: "Status belum dikenali", count: unknown2 }] : groups;
+    };
+    const resources = tables2.Resources ?? [], facilities = tables2.Facilities ?? [];
+    const knownResources = [
+      "Siap simulasi",
+      "Perlu konfirmasi",
+      "Tidak siap simulasi"
+    ];
+    const relevant = [
+      ...allRequests,
+      ...allMissions,
+      ...tables2.MedicalReviews ?? [],
+      ...tables2.FlightReviews ?? [],
+      ...handovers,
+      ...resources,
+      ...facilities
+    ];
+    const validTime = (value) => Number.isFinite(Date.parse(value)) && Date.parse(value) <= now;
+    const latestUpdated = relevant.map((r) => r.updatedAt).filter(validTime).sort((a, b) => Date.parse(b) - Date.parse(a))[0];
+    const updated = latestUpdated ? new Date(Date.parse(latestUpdated)).toISOString() : null;
+    const days = period === "7" ? 7 : 30;
+    const today = new Date(now).toISOString().slice(0, 10);
+    const midnight = Date.parse(today + "T00:00:00Z");
+    const trend = Array.from({ length: days }, (_, i) => {
+      const date5 = new Date(midnight - (days - 1 - i) * 864e5).toISOString().slice(0, 10);
+      return {
+        date: date5,
+        requests: requests.filter((r) => r.createdAt.slice(0, 10) === date5).length,
+        completed: missions.filter(
+          (m) => m.status === "Selesai" && m.updatedAt.slice(0, 10) === date5
+        ).length,
+        cancelled: missions.filter(
+          (m) => m.status === "Dibatalkan" && m.updatedAt.slice(0, 10) === date5
+        ).length
+      };
+    });
+    const cohortIds = new Set(missions.map((m) => m.id));
+    const stageDurations = missionStages.map((stage) => {
+      const samples = (tables2.ActivityLogs ?? []).filter(
+        (log) => log.action === "missions.transition" && cohortIds.has(String(log.entityId)) && log.previousStatus === stage && typeof log.durationSeconds === "number" && Number.isFinite(log.durationSeconds) && log.durationSeconds >= 0
+      ).map((log) => Number(log.durationSeconds));
+      return {
+        stage,
+        samples: samples.length,
+        meanSeconds: samples.length ? samples.reduce((a, b) => a + b, 0) / samples.length : 0
+      };
+    });
+    return {
+      generatedAt: new Date(now).toISOString(),
+      lastDataUpdatedAt: updated,
+      period,
+      cohortStartAt: cutoff === null ? null : new Date(cutoff).toISOString(),
+      totals: {
+        requests: requests.length,
+        patientsReported: requests.reduce(
+          (n, r) => n + (typeof r.patients === "number" && Number.isInteger(r.patients) && r.patients > 0 ? r.patients : 0),
+          0
+        ),
+        missions: missions.length,
+        activeMissions: active(missions).length,
+        completedMissions: missions.filter((m) => m.status === "Selesai").length,
+        cancelledMissions: missions.filter((m) => m.status === "Dibatalkan").length,
+        activeOutsidePeriod: active(allMissions).length - active(missions).length
+      },
+      pending: {
+        operator: open2.filter((r) => r.status === "Tercatat di Server").length,
+        medical: open2.filter(
+          (r) => latest("MedicalReviews", r.id) !== "Rekomendasi Dicatat"
+        ).length,
+        flight: flight.filter(
+          (status) => !["Disetujui", "Tidak Disetujui"].includes(status ?? "")
+        ).length,
+        handover: active(missions).filter(
+          (m) => !handovers.some((h) => h.missionId === m.id)
+        ).length,
+        flightDelayed: flight.filter((s) => s === "Ditunda").length,
+        flightDenied: flight.filter((s) => s === "Tidak Disetujui").length,
+        completedWithoutHandover: missions.filter(
+          (m) => m.status === "Selesai" && !handovers.some((h) => h.missionId === m.id)
+        ).length
+      },
+      resources: {
+        total: resources.length,
+        ready: resources.filter((r) => r.status === "Siap simulasi").length,
+        unconfirmed: resources.filter((r) => r.status === "Perlu konfirmasi").length,
+        unavailable: resources.filter((r) => r.status === "Tidak siap simulasi").length,
+        unknown: resources.filter((r) => !knownResources.includes(r.status)).length
+      },
+      facilities: {
+        total: facilities.length,
+        needsConfirmation: facilities.filter(
+          (f) => f.status === "Perlu konfirmasi"
+        ).length
+      },
+      requestsByStatus: distribution(requests, requestStages),
+      missionsByStatus: distribution(missions, [...missionStages, "Dibatalkan"]),
+      trend,
+      stageDurations,
+      quality: {
+        invalidTimestamps: relevant.filter(
+          (r) => !validTime(r.createdAt) || !validTime(r.updatedAt)
+        ).length,
+        unknownStatuses: allRequests.filter((r) => !requestStages.includes(r.status)).length + allMissions.filter(
+          (m) => ![...missionStages, "Dibatalkan"].includes(m.status)
+        ).length,
+        orphanMissions: allMissions.filter(
+          (m) => !requestIds.has(String(m.requestId))
+        ).length,
+        orphanHandovers: handovers.filter(
+          (h) => !missionIds.has(String(h.missionId))
+        ).length
+      }
+    };
+  }
+
   // src/services/demo.ts
   var record2 = (data) => ({
     id: crypto.randomUUID(),
@@ -20542,6 +20683,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const table = tables[group];
     if (!actor && action !== "requests.create")
       throw Error("UNAUTHORIZED: Login diperlukan");
+    if (action === "leadership.summary") {
+      if (!["Viewer pimpinan", "Administrator"].includes(actor.role))
+        throw Error(
+          "FORBIDDEN: Akses pengawasan memerlukan peran Viewer pimpinan atau Administrator"
+        );
+      return buildLeadershipSummary(s.tables, p);
+    }
+    if (actor?.role === "Viewer pimpinan")
+      throw Error(
+        "FORBIDDEN: Gunakan ringkasan pengawasan pimpinan; data operasional rinci dibatasi"
+      );
     if (verb === "list" || verb === "get") {
       if (!table) throw Error("ACTION: Action tidak tersedia");
       let rows = s.tables[table];

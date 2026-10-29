@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { roles, type Actor } from "../types";
+import { roles, type Actor, type Role } from "../types";
 import { mode, call } from "../services/api";
 export default function Login({
   onLogin,
   destination = "/internal",
+  initialRole = "Operator",
 }: {
   onLogin: (a: Actor) => void;
   destination?: string;
+  initialRole?: Role;
 }) {
-  const [role, setRole] = useState(roles[0]);
+  const [role, setRole] = useState(initialRole);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
@@ -36,7 +38,12 @@ export default function Login({
                     password: data.get("password"),
                   });
             onLogin(actor);
-            navigate(destination, { replace: true });
+            navigate(
+              actor.role === "Viewer pimpinan" && destination === "/internal"
+                ? "/pimpinan"
+                : destination,
+              { replace: true },
+            );
           } catch (e) {
             setError(String(e));
           } finally {

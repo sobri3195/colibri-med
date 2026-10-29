@@ -51,3 +51,11 @@ Buka `/mobile` untuk antarmuka ponsel dengan bottom navigation **Beranda, Permoh
 Draft dipisahkan per mode, pengguna, permohonan dan formulir. Penilaian yang diperbarui memakai ID/revision terbaru; draft lama tetap terlihat ketika terjadi konflik. Outbox menjaga urutan operasi, memeriksa sesi saat retry connected, dan menghentikan pengiriman pada konflik atau kegagalan sebagian. Konflik yang sudah ditinjau dapat diarsipkan tanpa menghapus salinan lokal. Fingerprint action/payload mencegah penggunaan ulang operationId untuk perubahan berbeda.
 
 Pembatalan misi tersedia dengan alasan wajib. Ringkasan mengecualikan misi dibatalkan dari hitungan aktif dan konfirmasi rumah sakit, tabel mendukung pagination/filter, dan posisi peta tetap terjaga ketika mengisi formulir. Lihat catatan pembaruan versi serta batas migrasi data lama di [API dan penyimpanan](docs/ACCESS-AND-API.md#retry-konflik-dan-pembaruan-versi).
+
+## Dashboard pimpinan
+
+Buka `/pimpinan` untuk pengawasan mobile dengan bottom navigation **Ringkasan, Operasi, Kesiapan, Perhatian, Laporan**. Dalam demo, login memakai **Viewer pimpinan** (sudah dipilih) atau Administrator. Mode connected tetap menggunakan akun undangan dan pemeriksaan role di backend.
+
+Sudut pantau **Kasau, Kemenhan, Kemenkes, Presiden** mengatur fokus indikator atas data yang sama; bukan autentikasi jabatan atau dashboard resmi pemerintah. Ringkasan meliputi beban permohonan, status misi, kesiapan sintetis, penilaian/tinjauan tertunda, serah terima dan kualitas data. Filter memakai kohor hari kalender UTC; snapshot kesiapan tetap seluruh data. Semua data sintetis, tidak ada cakupan atau indikator resmi yang dikarang.
+
+Endpoint `leadership.summary` hanya mengirim agregat tanpa identitas, kontak, koordinat atau catatan pasien. Viewer kini hanya dapat membaca agregat; akses endpoint rinci/mutasi ditolak server. CSV/PDF mengikuti proyeksi yang sama. Dashboard hanya untuk pemantauan, tidak melakukan keputusan medis atau persetujuan penerbangan.

@@ -31,6 +31,9 @@ export function Home() {
           <Link className="button secondary" to="/mobile">
             Versi mobile
           </Link>
+          <Link className="button secondary" to="/pimpinan">
+            Pengawasan pimpinan
+          </Link>
         </div>
         <div className="hero-icon">
           <Plane size={160} strokeWidth={1} />

@@ -39,6 +39,7 @@ var ACTIONS = [
   "handovers.save",
   "handovers.list",
   "reports.summary",
+  "leadership.summary",
   "activity.list",
 ];
 function envelope_(raw) {
