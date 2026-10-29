@@ -43,3 +43,9 @@ Browser test memakai Chromium sistem bila tersedia atau browser terpasang Playwr
 Salin `.env.example` hanya sebagai template tanpa nilai rahasia. Rahasia koneksi harus berada di environment server Vercel dan Script Properties; **tidak boleh memakai prefix `VITE_`**. Vite saja menjalankan demo, bukan Vercel Functions. Connected tidak fallback otomatis ke demo saat backend gagal.
 
 Tidak ada deployment publik atau koneksi Sheets nyata yang diklaim. Prototipe hanya untuk latihan menggunakan data sintetis; bukan sistem medis atau penerbangan siap operasional.
+
+## Penyempurnaan alur
+
+Draft dipisahkan per mode, pengguna, permohonan dan formulir. Penilaian yang diperbarui memakai ID/revision terbaru; draft lama tetap terlihat ketika terjadi konflik. Outbox menjaga urutan operasi, memeriksa sesi saat retry connected, dan menghentikan pengiriman pada konflik atau kegagalan sebagian. Konflik yang sudah ditinjau dapat diarsipkan tanpa menghapus salinan lokal. Fingerprint action/payload mencegah penggunaan ulang operationId untuk perubahan berbeda.
+
+Pembatalan misi tersedia dengan alasan wajib. Ringkasan mengecualikan misi dibatalkan dari hitungan aktif dan konfirmasi rumah sakit, tabel mendukung pagination/filter, dan posisi peta tetap terjaga ketika mengisi formulir. Lihat catatan pembaruan versi serta batas migrasi data lama di [API dan penyimpanan](docs/ACCESS-AND-API.md#retry-konflik-dan-pembaruan-versi).

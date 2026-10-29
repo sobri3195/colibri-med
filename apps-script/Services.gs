@@ -61,8 +61,16 @@ function service_(actor, action, p) {
   if (op) {
     if (op.owner !== owner)
       throw Error("FORBIDDEN: Operasi milik pengguna lain");
+    if (op.fingerprint !== Domain.operationFingerprint(action, p))
+      throw Error(
+        "OPERATION_REUSE: operationId telah digunakan untuk permintaan berbeda",
+      );
     if (op.status === "Committed") {
-      state.processed[p.operationId] = { owner: op.owner, result: op.result };
+      state.processed[p.operationId] = {
+        owner: op.owner,
+        result: op.result,
+        fingerprint: op.fingerprint,
+      };
       return Domain.execute(state, actor, action, p);
     }
     throw Error(
@@ -70,6 +78,14 @@ function service_(actor, action, p) {
     );
   }
   var original = JSON.parse(before);
+  if (
+    operations.some(function (operation) {
+      return operation.status !== "Committed";
+    })
+  )
+    throw Error(
+      "PARTIAL_FAILURE: Ada operasi tertunda; administrator harus merekonsiliasi sebelum perubahan baru.",
+    );
   var result = Domain.execute(state, actor, action, p);
   if (!mutation) return result;
   // Journal pending first. A partial write is never silently replayed.
@@ -79,6 +95,7 @@ function service_(actor, action, p) {
       owner: owner,
       status: "Pending",
       action: action,
+      fingerprint: Domain.operationFingerprint(action, p),
       entityId: result.id,
       result: result,
     },

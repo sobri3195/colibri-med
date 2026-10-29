@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Plane, ShieldCheck, ClipboardList } from "lucide-react";
 import LocationMap from "../components/LocationMap";
 import { requestSchema } from "../lib/domain";
-import { submit, retry } from "../services/api";
+import { submit, retry, mode } from "../services/api";
 import type { Actor } from "../types";
 import { getLocal, putLocal } from "../services/storage";
 export function Home() {
@@ -126,7 +126,11 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
   );
   const save = async () => {
     try {
-      await putLocal("drafts", (actor?.id ?? "public") + ":request", form);
+      await putLocal(
+        "drafts",
+        mode + ":" + (actor?.id ?? "public") + ":request",
+        form,
+      );
       setNotice("Tersimpan lokal — draft belum dikirim.");
     } catch {
       setNotice("Penyimpanan browser tidak tersedia.");
@@ -194,7 +198,14 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
             onChange={(e) => setForm({ ...form, summary: e.target.value })}
           />
         </label>
-        <LocationMap onPick={pick} />
+        <LocationMap
+          onPick={pick}
+          selected={
+            form.lat !== "" && form.lng !== ""
+              ? [Number(form.lat), Number(form.lng)]
+              : undefined
+          }
+        />
         <button
           type="button"
           className="secondary"
@@ -231,7 +242,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
                 setForm(
                   (await getLocal(
                     "drafts",
-                    (actor?.id ?? "public") + ":request",
+                    mode + ":" + (actor?.id ?? "public") + ":request",
                   )) ?? empty,
                 );
               } catch {

@@ -187,6 +187,12 @@ describe("workflow and permissions", () => {
         actor("Koordinator penerbangan"),
         "flightReviews.save",
         op({
+          ...(s.tables.FlightReviews.at(-1)
+            ? {
+                id: s.tables.FlightReviews.at(-1)!.id,
+                baseRevision: s.tables.FlightReviews.at(-1)!.revision,
+              }
+            : {}),
           data: { requestId: r.id, text: "Tinjauan sintetis", status, reason },
         }),
       );

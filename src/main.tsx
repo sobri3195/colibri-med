@@ -18,13 +18,25 @@ import "./styles.css";
 function App() {
   const [actor, setActor] = useState<Actor | null>(null);
   const [error, setError] = useState("");
+  const [checking, setChecking] = useState(mode === "connected");
   const navigate = useNavigate();
   useEffect(() => {
     if (mode === "connected")
       void call("auth.me")
         .then(setActor)
-        .catch(() => setActor(null));
+        .catch(() => setActor(null))
+        .finally(() => setChecking(false));
   }, []);
+  useEffect(() => {
+    if (!actor) return;
+    const expired = () => {
+      setActor(null);
+      setError("Sesi kedaluwarsa. Masuk kembali untuk mengirim operasi.");
+      navigate("/login");
+    };
+    window.addEventListener("colibri-session-expired", expired);
+    return () => window.removeEventListener("colibri-session-expired", expired);
+  }, [actor, navigate]);
   useEffect(() => {
     if (!actor) return;
     const timer = setTimeout(
@@ -92,11 +104,23 @@ function App() {
             path="/permohonan"
             element={<RequestForm key={actor?.id ?? "public"} actor={actor} />}
           />
-          <Route path="/login" element={<Login onLogin={setActor} />} />
+          <Route
+            path="/login"
+            element={
+              <Login
+                onLogin={(a) => {
+                  setError("");
+                  setActor(a);
+                }}
+              />
+            }
+          />
           <Route
             path="/internal/:section?"
             element={
-              actor ? (
+              checking ? (
+                <p role="status">Memeriksa sesi…</p>
+              ) : actor ? (
                 <Internal key={actor.id} actor={actor} />
               ) : (
                 <Navigate to="/login" />

@@ -226,6 +226,10 @@ describe("actual Apps Script dispatcher against in-memory Sheets", () => {
     };
     expect(r.post("requests.create", p).ok).toBe(true);
     expect(r.post("requests.create", p).ok).toBe(true);
+    expect(
+      r.post("requests.create", { ...p, data: { ...p.data, patients: 2 } })
+        .error.code,
+    ).toBe("OPERATION_REUSE");
     expect(r.sheets.get("Requests")).toHaveLength(2);
     expect(r.run(`safeCell_(' =SUM(1,1)')`)).toBe("' =SUM(1,1)");
     for (const cell of r.sheets.get("Requests")![1])
@@ -254,5 +258,12 @@ describe("actual Apps Script dispatcher against in-memory Sheets", () => {
     r.setFail(false);
     expect(r.post("requests.create", p).error.code).toBe("PARTIAL_FAILURE");
     expect(r.sheets.get("Requests")).toHaveLength(2);
+    expect(
+      r.post("requests.create", {
+        ...p,
+        id: randomUUID(),
+        operationId: randomUUID(),
+      }).error.code,
+    ).toBe("PARTIAL_FAILURE");
   });
 });

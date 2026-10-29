@@ -1,30 +1,64 @@
 import { z } from "zod";
-export const requestSchema = z.object({
-  name: z.string().trim().min(3).max(100),
-  contact: z.string().max(100),
-  facility: z.string().min(3).max(150),
-  summary: z.string().min(5).max(2000),
-  patients: z
-    .union([z.number(), z.string().trim().min(1)])
-    .transform(Number)
-    .pipe(z.number().int().min(1).max(100)),
-  location: z.string().min(3).max(300),
-  access: z.string().max(500),
-  lat: z.union([
-    z.literal(""),
-    z
+import type { RecordData } from "../types";
+export function summaryCounts(data: Record<string, RecordData[]>) {
+  const requests = data.Requests ?? [];
+  const missions = data.Missions ?? [];
+  const open = requests.filter((r) => r.status !== "Ditutup");
+  const active = missions.filter(
+    (m) => !["Selesai", "Dibatalkan"].includes(m.status),
+  );
+  const latest = (table: string, id: string) =>
+    (data[table] ?? []).filter((r) => r.requestId === id).at(-1)?.status;
+  return {
+    "Permohonan belum direspons": open.filter(
+      (r) => r.status === "Tercatat di Server",
+    ).length,
+    "Penilaian medis tertunda": open.filter(
+      (r) => latest("MedicalReviews", r.id) !== "Rekomendasi Dicatat",
+    ).length,
+    "Misi aktif": active.length,
+    "Tinjauan penerbangan tertunda": open.filter(
+      (r) =>
+        !["Disetujui", "Tidak Disetujui"].includes(
+          latest("FlightReviews", r.id) ?? "",
+        ),
+    ).length,
+    "Konfirmasi rumah sakit": active.filter(
+      (m) => !(data.HandoverRecords ?? []).some((h) => h.missionId === m.id),
+    ).length,
+  };
+}
+export const requestSchema = z
+  .object({
+    name: z.string().trim().min(3).max(100),
+    contact: z.string().max(100),
+    facility: z.string().min(3).max(150),
+    summary: z.string().min(5).max(2000),
+    patients: z
       .union([z.number(), z.string().trim().min(1)])
       .transform(Number)
-      .pipe(z.number().min(-90).max(90)),
-  ]),
-  lng: z.union([
-    z.literal(""),
-    z
-      .union([z.number(), z.string().trim().min(1)])
-      .transform(Number)
-      .pipe(z.number().min(-180).max(180)),
-  ]),
-});
+      .pipe(z.number().int().min(1).max(100)),
+    location: z.string().min(3).max(300),
+    access: z.string().max(500),
+    lat: z.union([
+      z.literal(""),
+      z
+        .union([z.number(), z.string().trim().min(1)])
+        .transform(Number)
+        .pipe(z.number().min(-90).max(90)),
+    ]),
+    lng: z.union([
+      z.literal(""),
+      z
+        .union([z.number(), z.string().trim().min(1)])
+        .transform(Number)
+        .pipe(z.number().min(-180).max(180)),
+    ]),
+  })
+  .refine((data) => (data.lat === "") === (data.lng === ""), {
+    message: "Lintang dan bujur harus diisi berpasangan",
+    path: ["lat"],
+  });
 export const requestStages = [
   "Tercatat di Server",
   "Diterima Operator",

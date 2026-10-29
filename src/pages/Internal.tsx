@@ -2,11 +2,19 @@ import { useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Download, RefreshCw } from "lucide-react";
 import type { Actor, RecordData } from "../types";
-import { call, mode, submit, retry } from "../services/api";
-import { outbox, getLocal, putLocal } from "../services/storage";
+import { call, mode, submit, retry, outboxOwner } from "../services/api";
+import {
+  outbox,
+  archiveOperation,
+  archivedOperations,
+} from "../services/storage";
+import RecordTable from "../components/RecordTable";
+import OperationalForm from "../features/OperationalForm";
+import MissionControls from "../features/MissionControls";
 import { usePolling } from "../features/usePolling";
 import {
   csv,
+  summaryCounts,
   date,
   missionStages,
   requestStages,
@@ -34,13 +42,15 @@ export default function Internal({ actor }: { actor: Actor }) {
   const [view, setView] = useState("table");
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState<any[]>([]);
+  const [archived, setArchived] = useState<any[]>([]);
   const [interval, setIntervalValue] = useState(30000);
   const [busy, setBusy] = useState(false);
-  const [draft, setDraft] = useState("");
+
   const load = useCallback(async () => {
+    setPending(await outbox(outboxOwner(actor)));
+    setArchived(await archivedOperations(outboxOwner(actor)));
     const result = await call("reports.summary", {}, actor);
     setData(result);
-    setPending(await outbox(actor.id));
   }, [actor]);
   const poll = usePolling(load, interval);
   const requests = data.Requests ?? [];
@@ -55,10 +65,13 @@ export default function Internal({ actor }: { actor: Actor }) {
       const r = await submit(actor, action, payload);
       setMessage(r.queued ? "Menunggu jaringan" : "Perubahan dicatat.");
       await poll.refresh();
+      return r;
     } catch (e) {
       setMessage(String(e));
+      return null;
     } finally {
       setBusy(false);
+      setPending(await outbox(outboxOwner(actor)));
     }
   };
   const filtered = (rows: RecordData[]) =>
@@ -75,46 +88,9 @@ export default function Internal({ actor }: { actor: Actor }) {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  const rows = (items: RecordData[]) =>
-    items.length ? (
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Referensi</th>
-              <th>Nama / rincian</th>
-              <th>Status</th>
-              <th>Pembaruan (WIB)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered(items).map((r) => (
-              <tr key={r.id}>
-                <td>{r.id.slice(0, 8)}</td>
-                <td>
-                  {String(
-                    r.name ??
-                      r.facility ??
-                      r.text ??
-                      r.team ??
-                      r.action ??
-                      r.requestId ??
-                      "—",
-                  )}
-                </td>
-                <td>
-                  <span className="badge">● {r.status}</span>
-                </td>
-                <td>{date(r.updatedAt)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!filtered(items).length && <p>Tidak ada hasil sesuai filter.</p>}
-      </div>
-    ) : (
-      <p className="empty">Belum ada data untuk ditampilkan.</p>
-    );
+  const rows = (items: RecordData[]) => (
+    <RecordTable items={items} query={search} status={filter} />
+  );
   return (
     <div className="workspace">
       <aside>
@@ -167,48 +143,7 @@ export default function Internal({ actor }: { actor: Actor }) {
         {section === "" && (
           <>
             <div className="grid three">
-              {[
-                [
-                  "Permohonan belum direspons",
-                  requests.filter((r) => r.status === "Tercatat di Server")
-                    .length,
-                ],
-                [
-                  "Penilaian medis tertunda",
-                  requests.filter(
-                    (r) =>
-                      !(data.MedicalReviews ?? []).some(
-                        (v) =>
-                          v.requestId === r.id &&
-                          v.status === "Rekomendasi Dicatat",
-                      ),
-                  ).length,
-                ],
-                [
-                  "Misi aktif",
-                  missions.filter((r) => r.status !== "Selesai").length,
-                ],
-                [
-                  "Tinjauan penerbangan tertunda",
-                  requests.filter(
-                    (r) =>
-                      !(data.FlightReviews ?? []).some(
-                        (v) =>
-                          v.requestId === r.id &&
-                          ["Disetujui", "Tidak Disetujui"].includes(v.status),
-                      ),
-                  ).length,
-                ],
-                [
-                  "Konfirmasi rumah sakit",
-                  missions.filter(
-                    (r) =>
-                      !(data.HandoverRecords ?? []).some(
-                        (v) => v.missionId === r.id,
-                      ),
-                  ).length,
-                ],
-              ].map(([title, count]) => (
+              {Object.entries(summaryCounts(data)).map(([title, count]) => (
                 <article className="card stat" key={title}>
                   <span>{title}</span>
                   <strong>{count}</strong>
@@ -260,7 +195,7 @@ export default function Internal({ actor }: { actor: Actor }) {
               rows(missions)
             ) : (
               <div className="kanban">
-                {missionStages.map((s) => (
+                {[...missionStages, "Dibatalkan"].map((s) => (
                   <div key={s}>
                     <h3>{s}</h3>
                     {filtered(missions)
@@ -384,38 +319,13 @@ export default function Internal({ actor }: { actor: Actor }) {
                   <div className="inset">
                     <h3>Misi · {mission.status}</h3>
                     <p>Tim: {String(mission.team)}</p>
-                    {allowed("Operator") &&
-                      !["Selesai", "Dibatalkan"].includes(mission.status) && (
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            void act("missions.transition", {
-                              id: mission.id,
-                              baseRevision: mission.revision,
-                              status:
-                                missionStages[
-                                  missionStages.indexOf(mission.status) + 1
-                                ],
-                              reason: new FormData(e.currentTarget).get(
-                                "reason",
-                              ),
-                            });
-                          }}
-                        >
-                          <label>
-                            Alasan override penyelesaian (opsional)
-                            <input name="reason" maxLength={500} />
-                          </label>
-                          <button disabled={busy}>
-                            Misi →{" "}
-                            {
-                              missionStages[
-                                missionStages.indexOf(mission.status) + 1
-                              ]
-                            }
-                          </button>
-                        </form>
-                      )}
+                    {allowed("Operator") && (
+                      <MissionControls
+                        mission={mission}
+                        busy={busy}
+                        act={act}
+                      />
+                    )}
                   </div>
                 )}
                 {[
@@ -438,106 +348,28 @@ export default function Internal({ actor }: { actor: Actor }) {
                           ? ["Koordinator penerbangan"]
                           : []),
                     ) && (
-                      <details key={group}>
-                        <summary>{title}</summary>
-                        <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            const f = new FormData(e.currentTarget);
-                            void act(
-                              group +
-                                (group === "patientNotes"
-                                  ? ".create"
-                                  : ".save"),
-                              {
-                                data: {
-                                  requestId: request.id,
-                                  missionId: mission?.id,
-                                  text: f.get("text"),
-                                  status: f.get("status") ?? "Dicatat",
-                                  reason: f.get("reason") ?? "",
-                                },
-                              },
-                            );
-                          }}
-                        >
-                          <label>
-                            Catatan sintetis
-                            <textarea
-                              name="text"
-                              required
-                              maxLength={2000}
-                              value={draft}
-                              onChange={(e) => setDraft(e.target.value)}
-                            />
-                          </label>
-                          {group.includes("Reviews") && (
-                            <label>
-                              Status
-                              <select name="status">
-                                {(group === "medicalReviews"
-                                  ? [
-                                      "Belum Dinilai",
-                                      "Sedang Dinilai",
-                                      "Rekomendasi Dicatat",
-                                    ]
-                                  : [
-                                      "Belum Ditinjau",
-                                      "Dalam Peninjauan",
-                                      "Disetujui",
-                                      "Ditunda",
-                                      "Tidak Disetujui",
-                                    ]
-                                ).map((s) => (
-                                  <option key={s}>{s}</option>
-                                ))}
-                              </select>
-                            </label>
-                          )}
-                          <label>
-                            Alasan penundaan/penolakan
-                            <input name="reason" maxLength={500} />
-                          </label>
-                          <div className="actions">
-                            <button
-                              disabled={
-                                busy || (!mission && !group.includes("Reviews"))
-                              }
-                            >
-                              Catat {title.toLowerCase()}
-                            </button>
-                            <button
-                              type="button"
-                              className="secondary"
-                              onClick={() => {
-                                void putLocal(
-                                  "drafts",
-                                  actor.id + ":" + request.id + ":" + group,
-                                  draft,
-                                )
-                                  .then(() => setMessage("Tersimpan lokal"))
-                                  .catch((e) => setMessage(String(e)));
-                              }}
-                            >
-                              Simpan draft lokal
-                            </button>
-                            <button
-                              type="button"
-                              className="secondary"
-                              onClick={() => {
-                                void getLocal(
-                                  "drafts",
-                                  actor.id + ":" + request.id + ":" + group,
-                                )
-                                  .then((v) => setDraft(v ?? ""))
-                                  .catch((e) => setMessage(String(e)));
-                              }}
-                            >
-                              Muat draft
-                            </button>
-                          </div>
-                        </form>
-                      </details>
+                      <OperationalForm
+                        key={group + ":" + request.id}
+                        actor={actor}
+                        request={request}
+                        mission={mission}
+                        group={group}
+                        title={title}
+                        current={(
+                          data[
+                            group === "medicalReviews"
+                              ? "MedicalReviews"
+                              : group === "flightReviews"
+                                ? "FlightReviews"
+                                : ""
+                          ] ?? []
+                        )
+                          .filter((r) => r.requestId === request.id)
+                          .at(-1)}
+                        busy={busy}
+                        act={act}
+                        notice={setMessage}
+                      />
                     ),
                 )}
                 <p className="muted">
@@ -695,6 +527,11 @@ export default function Internal({ actor }: { actor: Actor }) {
                           r.status +
                           " | " +
                           String(r.reason ?? "") +
+                          (r.durationSeconds !== undefined
+                            ? " | durasi tahap: " +
+                              Number(r.durationSeconds).toFixed(0) +
+                              " detik"
+                            : "") +
                           " | " +
                           date(r.updatedAt),
                       ),
@@ -748,11 +585,71 @@ export default function Internal({ actor }: { actor: Actor }) {
               Kirim ulang operasi tertunda
             </button>
             {pending.map((p) => (
-              <p key={p.operationId}>
-                {p.action} · {p.status} · percobaan {p.retryCount}
-              </p>
+              <details key={p.operationId}>
+                <summary>
+                  {p.action} · {p.status} · percobaan {p.retryCount}
+                </summary>
+                <p>ID operasi: {p.operationId}</p>
+                <p>
+                  Revision lokal: {p.baseRevision} · Revision data terbaru:{" "}
+                  {Object.values(data)
+                    .flat()
+                    .find((r) => r.id === p.entityId)?.revision ??
+                    "belum ditemukan"}
+                </p>
+                <p>
+                  Periksa data terbaru sebelum membuat perubahan pengganti.
+                  Pengarsipan menyimpan salinan operasi lokal dan tidak
+                  membatalkan perubahan di server.
+                </p>
+                {["Konflik perubahan", "Perlu ditinjau"].includes(p.status) && (
+                  <button
+                    className="secondary"
+                    onClick={async () => {
+                      try {
+                        await archiveOperation(
+                          outboxOwner(actor),
+                          p.operationId,
+                        );
+                        setMessage(
+                          "Operasi diarsipkan. Muat data terbaru lalu tinjau perubahan pengganti.",
+                        );
+                        await poll.refresh();
+                      } catch (e) {
+                        setMessage(String(e));
+                      }
+                    }}
+                  >
+                    Arsipkan operasi setelah ditinjau
+                  </button>
+                )}
+                {p.status === "Perlu rekonsiliasi" && (
+                  <p>
+                    Hubungi administrator dengan ID operasi. Jangan membuat
+                    operasi pengganti sebelum rekonsiliasi selesai.
+                  </p>
+                )}
+              </details>
             ))}
             {!pending.length && <p>Tidak ada operasi tertunda.</p>}
+            {!!archived.length && (
+              <details>
+                <summary>Arsip operasi ditinjau ({archived.length})</summary>
+                <p>Salinan lokal; tidak dikirim ulang.</p>
+                <button
+                  className="secondary"
+                  onClick={() =>
+                    download(
+                      "json",
+                      JSON.stringify(archived, null, 2),
+                      "application/json",
+                    )
+                  }
+                >
+                  Unduh arsip sintetis saya
+                </button>
+              </details>
+            )}
             <h3>Inbox aktivitas</h3>
             {rows((data.ActivityLogs ?? []).slice(0, 10))}
           </section>

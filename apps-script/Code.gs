@@ -46,7 +46,7 @@ function doPost(event) {
   } catch (error) {
     var message = String((error && error.message) || "");
     var match =
-      /^(UNAUTHORIZED|FORBIDDEN|VALIDATION|CONFLICT|WORKFLOW|RATE_LIMIT|PARTIAL_FAILURE|NOT_FOUND|SCHEMA|CONFIG|BUSY|PAYLOAD|ACTION): (.{1,180})/.exec(
+      /^(UNAUTHORIZED|FORBIDDEN|VALIDATION|CONFLICT|OPERATION_REUSE|WORKFLOW|RATE_LIMIT|PARTIAL_FAILURE|NOT_FOUND|SCHEMA|CONFIG|BUSY|PAYLOAD|ACTION): (.{1,180})/.exec(
         message,
       );
     output = {

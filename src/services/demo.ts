@@ -1,9 +1,13 @@
 import type { Actor, RecordData, Role } from "../types";
 import { getLocal, putLocal } from "./storage";
 import { missionStages, requestStages, requestSchema } from "../lib/domain";
+import { operationFingerprint } from "../lib/operations";
 type State = {
   tables: Record<string, RecordData[]>;
-  processed: Record<string, { owner: string; result: unknown }>;
+  processed: Record<
+    string,
+    { owner: string; result: unknown; fingerprint: string }
+  >;
 };
 const record = (data: Record<string, unknown>): RecordData => ({
   id: crypto.randomUUID(),
@@ -78,6 +82,14 @@ const tables: Record<string, string> = {
   handovers: "HandoverRecords",
   activity: "ActivityLogs",
 };
+function parseRequest(data: unknown) {
+  const parsed = requestSchema.safeParse(data);
+  if (!parsed.success)
+    throw Error(
+      "VALIDATION: Data permohonan tidak valid; periksa field dan pasangan koordinat",
+    );
+  return parsed.data;
+}
 export function execute(
   s: State,
   actor: Actor | null,
@@ -143,10 +155,15 @@ export function execute(
   if (typeof p.operationId !== "string" || !p.operationId)
     throw Error("VALIDATION: operationId diperlukan");
   const owner = actor?.id ?? "public";
+  const fingerprint = operationFingerprint(action, p);
   const previous = s.processed[p.operationId];
   if (previous) {
     if (previous.owner !== owner)
       throw Error("FORBIDDEN: Operasi milik pengguna lain");
+    if (previous.fingerprint !== fingerprint)
+      throw Error(
+        "OPERATION_REUSE: operationId telah digunakan untuk permintaan berbeda",
+      );
     return previous.result;
   }
   if (
@@ -159,11 +176,22 @@ export function execute(
   const priorRevision = row?.revision;
   const previousStatus = row?.status ?? "";
   const previousUpdatedAt = row?.updatedAt;
+  if (group.includes("Reviews")) {
+    const existing = s.tables[table]
+      .filter((r) => r.requestId === p.data?.requestId)
+      .at(-1);
+    if (existing && row?.id !== existing.id)
+      throw Error(
+        "CONFLICT: Penilaian sudah ada; muat data terbaru sebelum memperbarui",
+      );
+    if (row && row.requestId !== p.data?.requestId)
+      throw Error("VALIDATION: Relasi penilaian tidak dapat diubah");
+  }
   if (row && p.baseRevision !== row.revision)
     throw Error("CONFLICT: Revision berubah; muat ulang dan tinjau");
   if (action === "requests.create") {
     if (row) throw Error("CONFLICT: ID sudah digunakan");
-    const data = requestSchema.parse(p.data);
+    const data = parseRequest(p.data);
     row = record({
       ...data,
       id: p.id ?? crypto.randomUUID(),
@@ -172,6 +200,7 @@ export function execute(
     });
     s.tables.Requests.push(row);
   } else if (action === "missions.assign") {
+    if (row) throw Error("CONFLICT: ID misi sudah digunakan");
     if (typeof p.team !== "string" || !p.team.trim() || p.team.length > 150)
       throw Error("VALIDATION: Nama tim diperlukan");
     if (
@@ -183,6 +212,7 @@ export function execute(
     if (s.tables.Missions.some((r) => r.requestId === p.requestId))
       throw Error("WORKFLOW: Misi sudah dibuat");
     row = record({
+      id: p.id ?? crypto.randomUUID(),
       requestId: p.requestId,
       status: "Persiapan",
       team: p.team,
@@ -199,7 +229,7 @@ export function execute(
     );
   } else if (action === "requests.update") {
     if (!row) throw Error("NOT_FOUND: Record tidak ditemukan");
-    Object.assign(row, requestSchema.parse(p.data));
+    Object.assign(row, parseRequest(p.data));
   } else if (action === "resources.update") {
     if (
       !row ||
@@ -332,7 +362,11 @@ export function execute(
     }),
   );
   const result = structuredClone(row);
-  s.processed[p.operationId] = { owner, result };
+  s.processed[p.operationId] = {
+    owner,
+    result,
+    fingerprint,
+  };
   return result;
 }
 export async function demoCall(actor: Actor | null, action: string, p: any) {

@@ -29,6 +29,7 @@ var Domain = (() => {
     bytesToHex: () => bytesToHex,
     execute: () => execute,
     hexToBytes: () => hexToBytes,
+    operationFingerprint: () => operationFingerprint,
     pbkdf2: () => pbkdf2,
     seed: () => seed,
     sha256: () => sha256
@@ -19972,6 +19973,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       external_exports.literal(""),
       external_exports.union([external_exports.number(), external_exports.string().trim().min(1)]).transform(Number).pipe(external_exports.number().min(-180).max(180))
     ])
+  }).refine((data) => data.lat === "" === (data.lng === ""), {
+    message: "Lintang dan bujur harus diisi berpasangan",
+    path: ["lat"]
   });
   var requestStages = [
     "Tercatat di Server",
@@ -19991,263 +19995,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "Selesai"
   ];
 
-  // src/services/demo.ts
-  var record2 = (data) => ({
-    id: crypto.randomUUID(),
-    createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-    updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    createdBy: "seed",
-    updatedBy: "seed",
-    revision: 1,
-    status: "Tersedia",
-    ...data
-  });
-  function seed() {
-    return {
-      processed: {},
-      tables: {
-        Requests: [
-          record2({
-            name: "Pemohon Contoh A",
-            contact: "kontak-contoh",
-            facility: "Klinik Simulasi Utara",
-            summary: "Simulasi kebutuhan evakuasi antar fasilitas",
-            patients: 1,
-            location: "Lokasi latihan A",
-            access: "Akses perlu ditinjau petugas",
-            lat: -6.28,
-            lng: 106.9,
-            status: "Tercatat di Server"
-          })
-        ],
-        Missions: [],
-        MedicalReviews: [],
-        FlightReviews: [],
-        PatientNotes: [],
-        Checklists: [],
-        HandoverRecords: [],
-        MissionAssignments: [],
-        Resources: [
-          record2({ name: "Tim Simulasi Alpha", status: "Perlu konfirmasi" })
-        ],
-        Facilities: [
-          record2({
-            name: "RS Simulasi Pusat",
-            lat: -6.2,
-            lng: 106.82,
-            status: "Perlu konfirmasi"
-          }),
-          record2({ name: "Klinik Simulasi Utara", lat: -6.28, lng: 106.9 })
-        ],
-        ActivityLogs: []
-      }
-    };
-  }
-  var grants = {
-    requests: ["Operator"],
-    resources: ["Operator"],
-    missions: ["Operator"],
-    medicalReviews: ["Koordinator medis"],
-    flightReviews: ["Koordinator penerbangan"],
-    patientNotes: ["Dokter/perawat"],
-    checklists: ["Dokter/perawat", "Koordinator penerbangan"],
-    handovers: ["Rumah sakit penerima", "Dokter/perawat"]
-  };
-  var tables = {
-    requests: "Requests",
-    missions: "Missions",
-    medicalReviews: "MedicalReviews",
-    flightReviews: "FlightReviews",
-    patientNotes: "PatientNotes",
-    checklists: "Checklists",
-    facilities: "Facilities",
-    resources: "Resources",
-    handovers: "HandoverRecords",
-    activity: "ActivityLogs"
-  };
-  function execute(s, actor, action, p) {
-    if (action === "auth.me") return actor;
-    const [group, verb] = action.split(".");
-    const table = tables[group];
-    if (!actor && action !== "requests.create")
-      throw Error("UNAUTHORIZED: Login diperlukan");
-    if (verb === "list" || verb === "get") {
-      if (!table) throw Error("ACTION: Action tidak tersedia");
-      let rows = s.tables[table];
-      if (group === "patientNotes" && actor && !["Dokter/perawat", "Koordinator medis", "Administrator"].includes(
-        actor.role
-      ))
-        throw Error("FORBIDDEN: Catatan dibatasi");
-      if (verb === "get") return rows.find((r) => r.id === p.id) ?? null;
-      rows = rows.filter(
-        (r) => (!p.status || r.status === p.status) && (!p.requestId || r.requestId === p.requestId) && (!p.missionId || r.missionId === p.missionId) && (!p.search || JSON.stringify(r).toLowerCase().includes(String(p.search).toLowerCase()))
-      );
-      return {
-        items: rows.slice(
-          p.offset ?? 0,
-          (p.offset ?? 0) + Math.min(p.limit ?? 50, 100)
-        ),
-        total: rows.length
-      };
-    }
-    if (action === "reports.summary")
-      return Object.fromEntries(
-        Object.entries(s.tables).filter(
-          ([key]) => key !== "PatientNotes" || ["Dokter/perawat", "Koordinator medis", "Administrator"].includes(
-            actor.role
-          )
-        )
-      );
-    if (actor?.role !== "Administrator" && !(grants[group] ?? []).includes(actor?.role) && !(action === "requests.create"))
-      throw Error("FORBIDDEN: Peran tidak berwenang");
-    if (!table || !["create", "update", "transition", "assign", "save"].includes(verb))
-      throw Error("ACTION: Action tidak tersedia");
-    if (typeof p.operationId !== "string" || !p.operationId)
-      throw Error("VALIDATION: operationId diperlukan");
-    const owner = actor?.id ?? "public";
-    const previous = s.processed[p.operationId];
-    if (previous) {
-      if (previous.owner !== owner)
-        throw Error("FORBIDDEN: Operasi milik pengguna lain");
-      return previous.result;
-    }
-    if (typeof p.operationId !== "string" || !/^[a-f0-9-]{36}$/.test(p.operationId) || p.id && !/^[a-f0-9-]{36}$/.test(p.id))
-      throw Error("VALIDATION: ID tidak valid");
-    let row = s.tables[table].find((r) => r.id === p.id);
-    const priorRevision = row?.revision;
-    const previousStatus = row?.status ?? "";
-    const previousUpdatedAt = row?.updatedAt;
-    if (row && p.baseRevision !== row.revision)
-      throw Error("CONFLICT: Revision berubah; muat ulang dan tinjau");
-    if (action === "requests.create") {
-      if (row) throw Error("CONFLICT: ID sudah digunakan");
-      const data = requestSchema.parse(p.data);
-      row = record2({
-        ...data,
-        id: p.id ?? crypto.randomUUID(),
-        status: "Tercatat di Server",
-        createdBy: owner
-      });
-      s.tables.Requests.push(row);
-    } else if (action === "missions.assign") {
-      if (typeof p.team !== "string" || !p.team.trim() || p.team.length > 150)
-        throw Error("VALIDATION: Nama tim diperlukan");
-      if (!s.tables.Requests.some(
-        (r) => r.id === p.requestId && r.status === "Dalam Koordinasi"
-      ))
-        throw Error("WORKFLOW: Permohonan harus dalam koordinasi");
-      if (s.tables.Missions.some((r) => r.requestId === p.requestId))
-        throw Error("WORKFLOW: Misi sudah dibuat");
-      row = record2({
-        requestId: p.requestId,
-        status: "Persiapan",
-        team: p.team,
-        createdBy: owner
-      });
-      s.tables.Missions.push(row);
-      s.tables.MissionAssignments.push(
-        record2({
-          missionId: row.id,
-          team: p.team,
-          createdBy: owner,
-          status: "Ditugaskan"
-        })
-      );
-    } else if (action === "requests.update") {
-      if (!row) throw Error("NOT_FOUND: Record tidak ditemukan");
-      Object.assign(row, requestSchema.parse(p.data));
-    } else if (action === "resources.update") {
-      if (!row || typeof p.data?.status !== "string" || !["Perlu konfirmasi", "Siap simulasi", "Tidak siap simulasi"].includes(
-        p.data.status
-      ))
-        throw Error("VALIDATION: Status kesiapan tidak valid");
-      row.status = p.data.status;
-    } else if (verb === "transition") {
-      if (p.reason !== void 0 && (typeof p.reason !== "string" || p.reason.length > 500))
-        throw Error("VALIDATION: Alasan tidak valid");
-      if (!row) throw Error("NOT_FOUND: Record tidak ditemukan");
-      const stages = group === "missions" ? missionStages : requestStages;
-      if (p.status === "Dibatalkan" && group !== "missions")
-        throw Error("WORKFLOW: Status tidak valid");
-      if (p.status === "Dibatalkan" && !String(p.reason ?? "").trim())
-        throw Error("WORKFLOW: Alasan pembatalan diperlukan");
-      if (row.status === "Selesai" || row.status === "Dibatalkan")
-        throw Error("WORKFLOW: Misi telah ditutup");
-      if (p.status !== "Dibatalkan" && stages.indexOf(String(p.status)) !== stages.indexOf(row.status) + 1)
-        throw Error("WORKFLOW: Transisi tidak valid");
-      if (p.status === "Berangkat" && s.tables.FlightReviews.filter((r) => r.requestId === row.requestId).at(
-        -1
-      )?.status !== "Disetujui")
-        throw Error("WORKFLOW: Persetujuan penerbangan diperlukan");
-      if (p.status === "Tim Ditugaskan" && !row.team)
-        throw Error("WORKFLOW: Tim diperlukan");
-      if (p.status === "Selesai" && !s.tables.HandoverRecords.some((r) => r.missionId === row.id) && !String(p.reason ?? "").trim())
-        throw Error("WORKFLOW: Serah terima atau alasan override diperlukan");
-      row.status = p.status;
-      if (p.reason) row.reason = p.reason;
-    } else if (["save", "create"].includes(verb)) {
-      if (group === "flightReviews" && ![
-        "Belum Ditinjau",
-        "Dalam Peninjauan",
-        "Disetujui",
-        "Ditunda",
-        "Tidak Disetujui"
-      ].includes(p.data?.status))
-        throw Error("VALIDATION: Status penerbangan tidak valid");
-      if (group === "medicalReviews" && !["Belum Dinilai", "Sedang Dinilai", "Rekomendasi Dicatat"].includes(
-        p.data?.status
-      ))
-        throw Error("VALIDATION: Status medis tidak valid");
-      if (["Ditunda", "Tidak Disetujui"].includes(p.data?.status) && !String(p.data?.reason ?? "").trim())
-        throw Error("VALIDATION: Alasan diperlukan");
-      if (typeof p.data?.text !== "string" || !p.data.text.trim() || p.data.text.length > 2e3)
-        throw Error(
-          "VALIDATION: Catatan teks diperlukan, maksimal 2000 karakter"
-        );
-      if (p.data.reason !== void 0 && (typeof p.data.reason !== "string" || p.data.reason.length > 500))
-        throw Error("VALIDATION: Alasan tidak valid");
-      if (!group.includes("Reviews") && p.data.status !== void 0 && p.data.status !== "Dicatat")
-        throw Error("VALIDATION: Status catatan tidak valid");
-      if (!s.tables.Requests.some((r) => r.id === p.data?.requestId))
-        throw Error("VALIDATION: Permohonan tidak ditemukan");
-      if (["handovers", "patientNotes", "checklists"].includes(group) && !s.tables.Missions.some(
-        (r) => r.id === p.data?.missionId && r.requestId === p.data.requestId
-      ))
-        throw Error("VALIDATION: Misi tidak sesuai");
-      const data = {
-        text: String(p.data.text).slice(0, 2e3),
-        requestId: p.data.requestId,
-        missionId: p.data.missionId ?? "",
-        status: p.data.status ?? "Dicatat",
-        reason: p.data.reason ?? ""
-      };
-      if (row) Object.assign(row, data);
-      else {
-        row = record2({
-          ...data,
-          id: p.id ?? crypto.randomUUID(),
-          createdBy: owner
-        });
-        s.tables[table].push(row);
-      }
-    } else throw Error("ACTION: Action tidak tersedia");
-    row.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-    row.updatedBy = owner;
-    row.revision = (priorRevision ?? 0) + 1;
-    s.tables.ActivityLogs.unshift(
-      record2({
-        action,
-        entityId: row.id,
-        createdBy: owner,
-        status: row.status,
-        previousStatus,
-        durationSeconds: previousUpdatedAt ? Math.max(0, (Date.now() - Date.parse(previousUpdatedAt)) / 1e3) : 0,
-        reason: String(p.reason ?? row.reason ?? "")
-      })
-    );
-    const result = structuredClone(row);
-    s.processed[p.operationId] = { owner, result };
-    return result;
+  // node_modules/@noble/hashes/_u64.js
+  var fromNumH = (n) => n / 2 ** 32 | 0;
+  var fromNumL = (n) => n >>> 0;
+  function setU64FromNum(view, byteOffset, n, isLE) {
+    const h = fromNumH(n);
+    const l = fromNumL(n);
+    view.setUint32(byteOffset, isLE ? l : h, isLE);
+    view.setUint32(byteOffset + 4, isLE ? h : l, isLE);
   }
 
   // node_modules/@noble/hashes/utils.js
@@ -20405,168 +20160,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     // Larger suffix values would need base-128 OID encoding and a different length byte.
     oid: Uint8Array.from([6, 9, 96, 134, 72, 1, 101, 3, 4, 2, suffix])
   });
-
-  // node_modules/@noble/hashes/hmac.js
-  var _HMAC = class {
-    constructor(hash2, key) {
-      __publicField(this, "oHash");
-      __publicField(this, "iHash");
-      __publicField(this, "blockLen");
-      __publicField(this, "outputLen");
-      __publicField(this, "canXOF", false);
-      __publicField(this, "finished", false);
-      __publicField(this, "destroyed", false);
-      ahash(hash2);
-      abytes(key, void 0, "key");
-      this.iHash = hash2.create();
-      if (typeof this.iHash.update !== "function")
-        throw new Error("expected Hash instance");
-      this.blockLen = this.iHash.blockLen;
-      this.outputLen = this.iHash.outputLen;
-      const blockLen = this.blockLen;
-      const pad = new Uint8Array(blockLen);
-      pad.set(key.length > blockLen ? hash2.create().update(key).digest() : key);
-      for (let i = 0; i < pad.length; i++)
-        pad[i] ^= 54;
-      this.iHash.update(pad);
-      this.oHash = hash2.create();
-      for (let i = 0; i < pad.length; i++)
-        pad[i] ^= 54 ^ 92;
-      this.oHash.update(pad);
-      clean(pad);
-    }
-    update(buf) {
-      aexists(this);
-      this.iHash.update(buf);
-      return this;
-    }
-    digestInto(out) {
-      aexists(this);
-      aoutput(out, this);
-      this.finished = true;
-      const buf = out.subarray(0, this.outputLen);
-      this.iHash.digestInto(buf);
-      this.oHash.update(buf);
-      this.oHash.digestInto(buf);
-      this.destroy();
-    }
-    digest() {
-      const out = new Uint8Array(this.oHash.outputLen);
-      this.digestInto(out);
-      return out;
-    }
-    _cloneInto(to) {
-      to || (to = Object.create(Object.getPrototypeOf(this), {}));
-      const { oHash, iHash, finished, destroyed, blockLen, outputLen, canXOF } = this;
-      to = to;
-      to.finished = finished;
-      to.destroyed = destroyed;
-      to.blockLen = blockLen;
-      to.outputLen = outputLen;
-      to.canXOF = canXOF;
-      to.oHash = oHash._cloneInto(to.oHash);
-      to.iHash = iHash._cloneInto(to.iHash);
-      return to;
-    }
-    clone() {
-      return this._cloneInto();
-    }
-    destroy() {
-      this.destroyed = true;
-      this.oHash.destroy();
-      this.iHash.destroy();
-    }
-  };
-  var hmac = /* @__PURE__ */ (() => {
-    const hmac_ = ((hash2, key, message) => new _HMAC(hash2, key).update(message).digest());
-    hmac_.create = (hash2, key) => new _HMAC(hash2, key);
-    return hmac_;
-  })();
-
-  // node_modules/@noble/hashes/pbkdf2.js
-  function pbkdf2Init(hash2, _password, _salt, _opts) {
-    ahash(hash2);
-    const opts = checkOpts({ dkLen: 32, asyncTick: 10 }, _opts);
-    const { c, dkLen, asyncTick } = opts;
-    anumber(c, "c");
-    anumber(dkLen, "dkLen");
-    anumber(asyncTick, "asyncTick");
-    if (c < 1)
-      throw new Error('"c" (iterations) must be >= 1');
-    if (dkLen < 1)
-      throw new Error('"dkLen" must be >= 1');
-    if (dkLen > (2 ** 32 - 1) * hash2.outputLen)
-      throw new Error("derived key too long");
-    const p = kdfInputToBytes(_password, "password");
-    try {
-      const s = kdfInputToBytes(_salt, "salt");
-      try {
-        const DK = new Uint8Array(dkLen);
-        const { iHash, oHash, outputLen } = hmac.create(hash2, p);
-        const u = new Uint8Array(outputLen);
-        const eng = pbkdf2Engine(iHash, oHash, s, u);
-        return { c, dkLen, asyncTick, DK, outputLen, eng };
-      } finally {
-        if (typeof _salt === "string")
-          clean(s);
-      }
-    } finally {
-      if (typeof _password === "string")
-        clean(p);
-    }
-  }
-  function pbkdf2Engine(iHash, oHash, salt, u) {
-    const counter = new Uint8Array(4);
-    const view = createView(counter);
-    const salted = iHash._cloneInto().update(salt);
-    const work = oHash._cloneInto();
-    const iClone = iHash._cloneInto;
-    const oClone = oHash._cloneInto;
-    return {
-      u1: (ti, Ti) => {
-        view.setInt32(0, ti, false);
-        salted._cloneInto(work).update(counter).digestInto(u);
-        oHash._cloneInto(work).update(u).digestInto(u);
-        Ti.set(u.subarray(0, Ti.length));
-      },
-      // Whole `F` inner loop for the sync variant: one optimized function owns the hot loop.
-      rounds: (c, Ti) => {
-        for (let ui = 1; ui < c; ui++) {
-          iClone.call(iHash, work).update(u).digestInto(u);
-          oClone.call(oHash, work).update(u).digestInto(u);
-          for (let i = 0; i < Ti.length; i++)
-            Ti[i] ^= u[i];
-        }
-      },
-      output: (DK) => {
-        iHash.destroy();
-        oHash.destroy();
-        salted.destroy();
-        work.destroy();
-        clean(u);
-        return DK;
-      }
-    };
-  }
-  function pbkdf2(hash2, password, salt, opts) {
-    const { c, dkLen, DK, outputLen, eng } = pbkdf2Init(hash2, password, salt, opts);
-    for (let ti = 1, pos = 0; pos < dkLen; ti++, pos += outputLen) {
-      const Ti = DK.subarray(pos, pos + outputLen);
-      eng.u1(ti, Ti);
-      eng.rounds(c, Ti);
-    }
-    return eng.output(DK);
-  }
-
-  // node_modules/@noble/hashes/_u64.js
-  var fromNumH = (n) => n / 2 ** 32 | 0;
-  var fromNumL = (n) => n >>> 0;
-  function setU64FromNum(view, byteOffset, n, isLE) {
-    const h = fromNumH(n);
-    const l = fromNumL(n);
-    view.setUint32(byteOffset, isLE ? l : h, isLE);
-    view.setUint32(byteOffset + 4, isLE ? h : l, isLE);
-  }
 
   // node_modules/@noble/hashes/_md.js
   function Chi(a, b, c) {
@@ -20845,5 +20438,459 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     () => new _SHA256(),
     /* @__PURE__ */ oidNist(1)
   );
+
+  // src/lib/operations.ts
+  function canonical(value, depth = 0) {
+    if (depth > 20) throw Error("VALIDATION: Payload terlalu dalam");
+    if (Array.isArray(value))
+      return "[" + value.map((v) => canonical(v ?? null, depth + 1)).join(",") + "]";
+    if (value !== null && typeof value === "object")
+      return "{" + Object.entries(value).filter(([, v]) => v !== void 0).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([k, v]) => JSON.stringify(k) + ":" + canonical(v, depth + 1)).join(",") + "}";
+    return JSON.stringify(value) ?? "null";
+  }
+  function operationFingerprint(action, payload) {
+    return bytesToHex(
+      sha256(new TextEncoder().encode(canonical({ action, payload })))
+    );
+  }
+
+  // src/services/demo.ts
+  var record2 = (data) => ({
+    id: crypto.randomUUID(),
+    createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    createdBy: "seed",
+    updatedBy: "seed",
+    revision: 1,
+    status: "Tersedia",
+    ...data
+  });
+  function seed() {
+    return {
+      processed: {},
+      tables: {
+        Requests: [
+          record2({
+            name: "Pemohon Contoh A",
+            contact: "kontak-contoh",
+            facility: "Klinik Simulasi Utara",
+            summary: "Simulasi kebutuhan evakuasi antar fasilitas",
+            patients: 1,
+            location: "Lokasi latihan A",
+            access: "Akses perlu ditinjau petugas",
+            lat: -6.28,
+            lng: 106.9,
+            status: "Tercatat di Server"
+          })
+        ],
+        Missions: [],
+        MedicalReviews: [],
+        FlightReviews: [],
+        PatientNotes: [],
+        Checklists: [],
+        HandoverRecords: [],
+        MissionAssignments: [],
+        Resources: [
+          record2({ name: "Tim Simulasi Alpha", status: "Perlu konfirmasi" })
+        ],
+        Facilities: [
+          record2({
+            name: "RS Simulasi Pusat",
+            lat: -6.2,
+            lng: 106.82,
+            status: "Perlu konfirmasi"
+          }),
+          record2({ name: "Klinik Simulasi Utara", lat: -6.28, lng: 106.9 })
+        ],
+        ActivityLogs: []
+      }
+    };
+  }
+  var grants = {
+    requests: ["Operator"],
+    resources: ["Operator"],
+    missions: ["Operator"],
+    medicalReviews: ["Koordinator medis"],
+    flightReviews: ["Koordinator penerbangan"],
+    patientNotes: ["Dokter/perawat"],
+    checklists: ["Dokter/perawat", "Koordinator penerbangan"],
+    handovers: ["Rumah sakit penerima", "Dokter/perawat"]
+  };
+  var tables = {
+    requests: "Requests",
+    missions: "Missions",
+    medicalReviews: "MedicalReviews",
+    flightReviews: "FlightReviews",
+    patientNotes: "PatientNotes",
+    checklists: "Checklists",
+    facilities: "Facilities",
+    resources: "Resources",
+    handovers: "HandoverRecords",
+    activity: "ActivityLogs"
+  };
+  function parseRequest(data) {
+    const parsed = requestSchema.safeParse(data);
+    if (!parsed.success)
+      throw Error(
+        "VALIDATION: Data permohonan tidak valid; periksa field dan pasangan koordinat"
+      );
+    return parsed.data;
+  }
+  function execute(s, actor, action, p) {
+    if (action === "auth.me") return actor;
+    const [group, verb] = action.split(".");
+    const table = tables[group];
+    if (!actor && action !== "requests.create")
+      throw Error("UNAUTHORIZED: Login diperlukan");
+    if (verb === "list" || verb === "get") {
+      if (!table) throw Error("ACTION: Action tidak tersedia");
+      let rows = s.tables[table];
+      if (group === "patientNotes" && actor && !["Dokter/perawat", "Koordinator medis", "Administrator"].includes(
+        actor.role
+      ))
+        throw Error("FORBIDDEN: Catatan dibatasi");
+      if (verb === "get") return rows.find((r) => r.id === p.id) ?? null;
+      rows = rows.filter(
+        (r) => (!p.status || r.status === p.status) && (!p.requestId || r.requestId === p.requestId) && (!p.missionId || r.missionId === p.missionId) && (!p.search || JSON.stringify(r).toLowerCase().includes(String(p.search).toLowerCase()))
+      );
+      return {
+        items: rows.slice(
+          p.offset ?? 0,
+          (p.offset ?? 0) + Math.min(p.limit ?? 50, 100)
+        ),
+        total: rows.length
+      };
+    }
+    if (action === "reports.summary")
+      return Object.fromEntries(
+        Object.entries(s.tables).filter(
+          ([key]) => key !== "PatientNotes" || ["Dokter/perawat", "Koordinator medis", "Administrator"].includes(
+            actor.role
+          )
+        )
+      );
+    if (actor?.role !== "Administrator" && !(grants[group] ?? []).includes(actor?.role) && !(action === "requests.create"))
+      throw Error("FORBIDDEN: Peran tidak berwenang");
+    if (!table || !["create", "update", "transition", "assign", "save"].includes(verb))
+      throw Error("ACTION: Action tidak tersedia");
+    if (typeof p.operationId !== "string" || !p.operationId)
+      throw Error("VALIDATION: operationId diperlukan");
+    const owner = actor?.id ?? "public";
+    const fingerprint = operationFingerprint(action, p);
+    const previous = s.processed[p.operationId];
+    if (previous) {
+      if (previous.owner !== owner)
+        throw Error("FORBIDDEN: Operasi milik pengguna lain");
+      if (previous.fingerprint !== fingerprint)
+        throw Error(
+          "OPERATION_REUSE: operationId telah digunakan untuk permintaan berbeda"
+        );
+      return previous.result;
+    }
+    if (typeof p.operationId !== "string" || !/^[a-f0-9-]{36}$/.test(p.operationId) || p.id && !/^[a-f0-9-]{36}$/.test(p.id))
+      throw Error("VALIDATION: ID tidak valid");
+    let row = s.tables[table].find((r) => r.id === p.id);
+    const priorRevision = row?.revision;
+    const previousStatus = row?.status ?? "";
+    const previousUpdatedAt = row?.updatedAt;
+    if (group.includes("Reviews")) {
+      const existing = s.tables[table].filter((r) => r.requestId === p.data?.requestId).at(-1);
+      if (existing && row?.id !== existing.id)
+        throw Error(
+          "CONFLICT: Penilaian sudah ada; muat data terbaru sebelum memperbarui"
+        );
+      if (row && row.requestId !== p.data?.requestId)
+        throw Error("VALIDATION: Relasi penilaian tidak dapat diubah");
+    }
+    if (row && p.baseRevision !== row.revision)
+      throw Error("CONFLICT: Revision berubah; muat ulang dan tinjau");
+    if (action === "requests.create") {
+      if (row) throw Error("CONFLICT: ID sudah digunakan");
+      const data = parseRequest(p.data);
+      row = record2({
+        ...data,
+        id: p.id ?? crypto.randomUUID(),
+        status: "Tercatat di Server",
+        createdBy: owner
+      });
+      s.tables.Requests.push(row);
+    } else if (action === "missions.assign") {
+      if (row) throw Error("CONFLICT: ID misi sudah digunakan");
+      if (typeof p.team !== "string" || !p.team.trim() || p.team.length > 150)
+        throw Error("VALIDATION: Nama tim diperlukan");
+      if (!s.tables.Requests.some(
+        (r) => r.id === p.requestId && r.status === "Dalam Koordinasi"
+      ))
+        throw Error("WORKFLOW: Permohonan harus dalam koordinasi");
+      if (s.tables.Missions.some((r) => r.requestId === p.requestId))
+        throw Error("WORKFLOW: Misi sudah dibuat");
+      row = record2({
+        id: p.id ?? crypto.randomUUID(),
+        requestId: p.requestId,
+        status: "Persiapan",
+        team: p.team,
+        createdBy: owner
+      });
+      s.tables.Missions.push(row);
+      s.tables.MissionAssignments.push(
+        record2({
+          missionId: row.id,
+          team: p.team,
+          createdBy: owner,
+          status: "Ditugaskan"
+        })
+      );
+    } else if (action === "requests.update") {
+      if (!row) throw Error("NOT_FOUND: Record tidak ditemukan");
+      Object.assign(row, parseRequest(p.data));
+    } else if (action === "resources.update") {
+      if (!row || typeof p.data?.status !== "string" || !["Perlu konfirmasi", "Siap simulasi", "Tidak siap simulasi"].includes(
+        p.data.status
+      ))
+        throw Error("VALIDATION: Status kesiapan tidak valid");
+      row.status = p.data.status;
+    } else if (verb === "transition") {
+      if (p.reason !== void 0 && (typeof p.reason !== "string" || p.reason.length > 500))
+        throw Error("VALIDATION: Alasan tidak valid");
+      if (!row) throw Error("NOT_FOUND: Record tidak ditemukan");
+      const stages = group === "missions" ? missionStages : requestStages;
+      if (p.status === "Dibatalkan" && group !== "missions")
+        throw Error("WORKFLOW: Status tidak valid");
+      if (p.status === "Dibatalkan" && !String(p.reason ?? "").trim())
+        throw Error("WORKFLOW: Alasan pembatalan diperlukan");
+      if (row.status === "Selesai" || row.status === "Dibatalkan")
+        throw Error("WORKFLOW: Misi telah ditutup");
+      if (p.status !== "Dibatalkan" && stages.indexOf(String(p.status)) !== stages.indexOf(row.status) + 1)
+        throw Error("WORKFLOW: Transisi tidak valid");
+      if (p.status === "Berangkat" && s.tables.FlightReviews.filter((r) => r.requestId === row.requestId).at(
+        -1
+      )?.status !== "Disetujui")
+        throw Error("WORKFLOW: Persetujuan penerbangan diperlukan");
+      if (p.status === "Tim Ditugaskan" && !row.team)
+        throw Error("WORKFLOW: Tim diperlukan");
+      if (p.status === "Selesai" && !s.tables.HandoverRecords.some((r) => r.missionId === row.id) && !String(p.reason ?? "").trim())
+        throw Error("WORKFLOW: Serah terima atau alasan override diperlukan");
+      row.status = p.status;
+      if (p.reason) row.reason = p.reason;
+    } else if (["save", "create"].includes(verb)) {
+      if (group === "flightReviews" && ![
+        "Belum Ditinjau",
+        "Dalam Peninjauan",
+        "Disetujui",
+        "Ditunda",
+        "Tidak Disetujui"
+      ].includes(p.data?.status))
+        throw Error("VALIDATION: Status penerbangan tidak valid");
+      if (group === "medicalReviews" && !["Belum Dinilai", "Sedang Dinilai", "Rekomendasi Dicatat"].includes(
+        p.data?.status
+      ))
+        throw Error("VALIDATION: Status medis tidak valid");
+      if (["Ditunda", "Tidak Disetujui"].includes(p.data?.status) && !String(p.data?.reason ?? "").trim())
+        throw Error("VALIDATION: Alasan diperlukan");
+      if (typeof p.data?.text !== "string" || !p.data.text.trim() || p.data.text.length > 2e3)
+        throw Error(
+          "VALIDATION: Catatan teks diperlukan, maksimal 2000 karakter"
+        );
+      if (p.data.reason !== void 0 && (typeof p.data.reason !== "string" || p.data.reason.length > 500))
+        throw Error("VALIDATION: Alasan tidak valid");
+      if (!group.includes("Reviews") && p.data.status !== void 0 && p.data.status !== "Dicatat")
+        throw Error("VALIDATION: Status catatan tidak valid");
+      if (!s.tables.Requests.some((r) => r.id === p.data?.requestId))
+        throw Error("VALIDATION: Permohonan tidak ditemukan");
+      if (["handovers", "patientNotes", "checklists"].includes(group) && !s.tables.Missions.some(
+        (r) => r.id === p.data?.missionId && r.requestId === p.data.requestId
+      ))
+        throw Error("VALIDATION: Misi tidak sesuai");
+      const data = {
+        text: String(p.data.text).slice(0, 2e3),
+        requestId: p.data.requestId,
+        missionId: p.data.missionId ?? "",
+        status: p.data.status ?? "Dicatat",
+        reason: p.data.reason ?? ""
+      };
+      if (row) Object.assign(row, data);
+      else {
+        row = record2({
+          ...data,
+          id: p.id ?? crypto.randomUUID(),
+          createdBy: owner
+        });
+        s.tables[table].push(row);
+      }
+    } else throw Error("ACTION: Action tidak tersedia");
+    row.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    row.updatedBy = owner;
+    row.revision = (priorRevision ?? 0) + 1;
+    s.tables.ActivityLogs.unshift(
+      record2({
+        action,
+        entityId: row.id,
+        createdBy: owner,
+        status: row.status,
+        previousStatus,
+        durationSeconds: previousUpdatedAt ? Math.max(0, (Date.now() - Date.parse(previousUpdatedAt)) / 1e3) : 0,
+        reason: String(p.reason ?? row.reason ?? "")
+      })
+    );
+    const result = structuredClone(row);
+    s.processed[p.operationId] = {
+      owner,
+      result,
+      fingerprint
+    };
+    return result;
+  }
+
+  // node_modules/@noble/hashes/hmac.js
+  var _HMAC = class {
+    constructor(hash2, key) {
+      __publicField(this, "oHash");
+      __publicField(this, "iHash");
+      __publicField(this, "blockLen");
+      __publicField(this, "outputLen");
+      __publicField(this, "canXOF", false);
+      __publicField(this, "finished", false);
+      __publicField(this, "destroyed", false);
+      ahash(hash2);
+      abytes(key, void 0, "key");
+      this.iHash = hash2.create();
+      if (typeof this.iHash.update !== "function")
+        throw new Error("expected Hash instance");
+      this.blockLen = this.iHash.blockLen;
+      this.outputLen = this.iHash.outputLen;
+      const blockLen = this.blockLen;
+      const pad = new Uint8Array(blockLen);
+      pad.set(key.length > blockLen ? hash2.create().update(key).digest() : key);
+      for (let i = 0; i < pad.length; i++)
+        pad[i] ^= 54;
+      this.iHash.update(pad);
+      this.oHash = hash2.create();
+      for (let i = 0; i < pad.length; i++)
+        pad[i] ^= 54 ^ 92;
+      this.oHash.update(pad);
+      clean(pad);
+    }
+    update(buf) {
+      aexists(this);
+      this.iHash.update(buf);
+      return this;
+    }
+    digestInto(out) {
+      aexists(this);
+      aoutput(out, this);
+      this.finished = true;
+      const buf = out.subarray(0, this.outputLen);
+      this.iHash.digestInto(buf);
+      this.oHash.update(buf);
+      this.oHash.digestInto(buf);
+      this.destroy();
+    }
+    digest() {
+      const out = new Uint8Array(this.oHash.outputLen);
+      this.digestInto(out);
+      return out;
+    }
+    _cloneInto(to) {
+      to || (to = Object.create(Object.getPrototypeOf(this), {}));
+      const { oHash, iHash, finished, destroyed, blockLen, outputLen, canXOF } = this;
+      to = to;
+      to.finished = finished;
+      to.destroyed = destroyed;
+      to.blockLen = blockLen;
+      to.outputLen = outputLen;
+      to.canXOF = canXOF;
+      to.oHash = oHash._cloneInto(to.oHash);
+      to.iHash = iHash._cloneInto(to.iHash);
+      return to;
+    }
+    clone() {
+      return this._cloneInto();
+    }
+    destroy() {
+      this.destroyed = true;
+      this.oHash.destroy();
+      this.iHash.destroy();
+    }
+  };
+  var hmac = /* @__PURE__ */ (() => {
+    const hmac_ = ((hash2, key, message) => new _HMAC(hash2, key).update(message).digest());
+    hmac_.create = (hash2, key) => new _HMAC(hash2, key);
+    return hmac_;
+  })();
+
+  // node_modules/@noble/hashes/pbkdf2.js
+  function pbkdf2Init(hash2, _password, _salt, _opts) {
+    ahash(hash2);
+    const opts = checkOpts({ dkLen: 32, asyncTick: 10 }, _opts);
+    const { c, dkLen, asyncTick } = opts;
+    anumber(c, "c");
+    anumber(dkLen, "dkLen");
+    anumber(asyncTick, "asyncTick");
+    if (c < 1)
+      throw new Error('"c" (iterations) must be >= 1');
+    if (dkLen < 1)
+      throw new Error('"dkLen" must be >= 1');
+    if (dkLen > (2 ** 32 - 1) * hash2.outputLen)
+      throw new Error("derived key too long");
+    const p = kdfInputToBytes(_password, "password");
+    try {
+      const s = kdfInputToBytes(_salt, "salt");
+      try {
+        const DK = new Uint8Array(dkLen);
+        const { iHash, oHash, outputLen } = hmac.create(hash2, p);
+        const u = new Uint8Array(outputLen);
+        const eng = pbkdf2Engine(iHash, oHash, s, u);
+        return { c, dkLen, asyncTick, DK, outputLen, eng };
+      } finally {
+        if (typeof _salt === "string")
+          clean(s);
+      }
+    } finally {
+      if (typeof _password === "string")
+        clean(p);
+    }
+  }
+  function pbkdf2Engine(iHash, oHash, salt, u) {
+    const counter = new Uint8Array(4);
+    const view = createView(counter);
+    const salted = iHash._cloneInto().update(salt);
+    const work = oHash._cloneInto();
+    const iClone = iHash._cloneInto;
+    const oClone = oHash._cloneInto;
+    return {
+      u1: (ti, Ti) => {
+        view.setInt32(0, ti, false);
+        salted._cloneInto(work).update(counter).digestInto(u);
+        oHash._cloneInto(work).update(u).digestInto(u);
+        Ti.set(u.subarray(0, Ti.length));
+      },
+      // Whole `F` inner loop for the sync variant: one optimized function owns the hot loop.
+      rounds: (c, Ti) => {
+        for (let ui = 1; ui < c; ui++) {
+          iClone.call(iHash, work).update(u).digestInto(u);
+          oClone.call(oHash, work).update(u).digestInto(u);
+          for (let i = 0; i < Ti.length; i++)
+            Ti[i] ^= u[i];
+        }
+      },
+      output: (DK) => {
+        iHash.destroy();
+        oHash.destroy();
+        salted.destroy();
+        work.destroy();
+        clean(u);
+        return DK;
+      }
+    };
+  }
+  function pbkdf2(hash2, password, salt, opts) {
+    const { c, dkLen, DK, outputLen, eng } = pbkdf2Init(hash2, password, salt, opts);
+    for (let ti = 1, pos = 0; pos < dkLen; ti++, pos += outputLen) {
+      const Ti = DK.subarray(pos, pos + outputLen);
+      eng.u1(ti, Ti);
+      eng.rounds(c, Ti);
+    }
+    return eng.output(DK);
+  }
   return __toCommonJS(entry_exports);
 })();

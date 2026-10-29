@@ -462,3 +462,32 @@ a:focus-visible {
     max-width: 100%;
   }
 }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  font-size: 12px;
+}
+.pagination label {
+  flex-direction: row;
+  align-items: center;
+  margin: 0;
+}
+.pagination select {
+  width: auto;
+  padding: 6px;
+}
+.duration {
+  display: block;
+  margin-top: 5px;
+}
+.danger {
+  background: #a53232;
+}
+.workspace-content,
+.workspace aside {
+  min-width: 0;
+}
