@@ -10,6 +10,11 @@ import {
 } from "../lib/domain";
 import { operationFingerprint } from "../lib/operations";
 import { buildLeadershipSummary } from "../lib/leadership";
+import {
+  seedAircraft,
+  aviationSnapshot,
+  aircraftReportSchema,
+} from "../lib/aviation";
 type State = {
   tables: Record<string, RecordData[]>;
   processed: Record<
@@ -28,6 +33,7 @@ const record = (data: Record<string, unknown>): RecordData => ({
   ...data,
 });
 export function seed(): State {
+  const aviation = seedAircraft(record);
   return {
     processed: {},
     tables: {
@@ -65,6 +71,8 @@ export function seed(): State {
         record({ name: "Klinik Simulasi Utara", lat: -6.28, lng: 106.9 }),
       ],
       ActivityLogs: [],
+      Aircraft: aviation.aircraft,
+      AircraftReports: aviation.reports,
     },
   };
 }
@@ -77,6 +85,7 @@ const grants: Record<string, Role[]> = {
   patientNotes: ["Dokter/perawat"],
   checklists: ["Dokter/perawat", "Koordinator penerbangan"],
   handovers: ["Rumah sakit penerima", "Dokter/perawat"],
+  aircraftReports: ["Koordinator penerbangan", "Dokter/perawat"],
 };
 const tables: Record<string, string> = {
   requests: "Requests",
@@ -89,6 +98,8 @@ const tables: Record<string, string> = {
   resources: "Resources",
   handovers: "HandoverRecords",
   activity: "ActivityLogs",
+  aircraft: "Aircraft",
+  aircraftReports: "AircraftReports",
 };
 function parseRequest(data: unknown) {
   const parsed = requestSchema.safeParse(data);
@@ -120,6 +131,7 @@ export function execute(
     throw Error(
       "FORBIDDEN: Gunakan ringkasan pengawasan pimpinan; data operasional rinci dibatasi",
     );
+  if (action === "aircraft.snapshot") return aviationSnapshot(s.tables);
   if (verb === "list" || verb === "get") {
     if (!table) throw Error("ACTION: Action tidak tersedia");
     let rows = s.tables[table];
@@ -220,7 +232,51 @@ export function execute(
   }
   if (row && p.baseRevision !== row.revision)
     throw Error("CONFLICT: Revision berubah; muat ulang dan tinjau");
-  if (action === "requests.create") {
+  if (action === "aircraftReports.create") {
+    if (row) throw Error("CONFLICT: ID laporan telah digunakan");
+    const parsed = aircraftReportSchema.safeParse(p.data);
+    if (!parsed.success)
+      throw Error(
+        "VALIDATION: Laporan awak tidak valid; periksa helikopter, catatan dan pasangan koordinat",
+      );
+    const data = parsed.data;
+    const aircraft = s.tables.Aircraft.find(
+      (a) => a.id === data.aircraftId && a.isSynthetic === true,
+    );
+    if (!aircraft)
+      throw Error("NOT_FOUND: Helikopter sintetis tidak ditemukan");
+    if (p.baseRevision !== aircraft.revision)
+      throw Error(
+        "CONFLICT: Posisi/laporan helikopter berubah; muat versi terbaru",
+      );
+    if (
+      data.missionId &&
+      !s.tables.Missions.some((m) => m.id === data.missionId)
+    )
+      throw Error("VALIDATION: Referensi misi tidak ditemukan");
+    const now = new Date().toISOString();
+    if (data.lat !== "") aircraft.positionReportedAt = now;
+    aircraft.lat = data.lat === "" ? aircraft.lat : data.lat;
+    aircraft.lng = data.lng === "" ? aircraft.lng : data.lng;
+    aircraft.status = data.aircraftStatus;
+    aircraft.missionId = data.missionId;
+    aircraft.updatedAt = now;
+    aircraft.updatedBy = owner;
+    aircraft.revision++;
+    row = record({
+      ...data,
+      id: p.id ?? crypto.randomUUID(),
+      lat: aircraft.lat,
+      lng: aircraft.lng,
+      reportedAt: now,
+      aircraftRevision: aircraft.revision,
+      positionSupplied: data.lat !== "",
+      status: "Dicatat",
+      createdBy: owner,
+      isSynthetic: true,
+    });
+    s.tables.AircraftReports.push(row);
+  } else if (action === "requests.create") {
     if (row) throw Error("CONFLICT: ID sudah digunakan");
     const data = parseRequest(p.data);
     row = record({
@@ -489,6 +545,12 @@ export function execute(
 export async function demoCall(actor: Actor | null, action: string, p: any) {
   const run = async () => {
     const s: State = (await getLocal("demo", "state")) ?? seed();
+    if (!Object.hasOwn(s.tables, "Aircraft")) {
+      const fixtures = seedAircraft(record);
+      s.tables.Aircraft = fixtures.aircraft;
+      s.tables.AircraftReports = fixtures.reports;
+    }
+    s.tables.AircraftReports ??= [];
     const result = execute(s, actor, action, p);
     await putLocal("demo", "state", s);
     return result;

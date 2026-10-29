@@ -15,6 +15,7 @@ export const mobileSections = [
   "laporan",
   "outbox",
   "pengaturan",
+  "helikopter",
 ];
 export function mobileDestination(value: unknown) {
   if (typeof value !== "string") return "/mobile";

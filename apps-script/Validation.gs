@@ -45,6 +45,8 @@ var ACTIONS = [
   "reports.summary",
   "leadership.summary",
   "activity.list",
+  "aircraft.snapshot",
+  "aircraftReports.create",
 ];
 function envelope_(raw) {
   if (

@@ -120,6 +120,48 @@ function runtime() {
   };
 }
 describe("actual Apps Script dispatcher against in-memory Sheets", () => {
+  it("dispatches helicopter reports with locked journal replay and seeds aircraft reports idempotently", () => {
+    const r = runtime();
+    const token = "f".repeat(64);
+    r.run(
+      `write_('Users',[base_({id:'flight-user',role:'Koordinator penerbangan',name:'Awak simulasi'})]);write_('Sessions',[base_({userId:'flight-user',tokenHash:digest_('${token}'),expiresAt:new Date(Date.now()+600000).toISOString()})]);`,
+    );
+    const before = r.post("aircraft.snapshot", {}, { sessionToken: token });
+    expect(before.ok).toBe(true);
+    expect(before.data.aircraft).toHaveLength(2);
+    const aircraft = before.data.aircraft[0];
+    const p = {
+      id: randomUUID(),
+      operationId: randomUUID(),
+      baseRevision: aircraft.revision,
+      data: {
+        aircraftId: aircraft.id,
+        missionId: "",
+        category: "Posisi",
+        text: "Awak mengirim posisi sintetis",
+        aircraftStatus: "Latihan bergerak",
+        lat: -6.21,
+        lng: 106.91,
+      },
+    };
+    expect(
+      r.post("aircraftReports.create", p, { sessionToken: token }).data
+        .aircraftRevision,
+    ).toBe(2);
+    expect(
+      r.post("aircraftReports.create", p, { sessionToken: token }).ok,
+    ).toBe(true);
+    const after = r.post("aircraft.snapshot", {}, { sessionToken: token });
+    expect(after.data.reports).toHaveLength(3);
+    expect(after.data.aircraft.find((a: any) => a.id === aircraft.id).lat).toBe(
+      -6.21,
+    );
+    r.run("setupSheets();seedSyntheticData();");
+    expect(
+      r.post("aircraft.snapshot", {}, { sessionToken: token }).data.reports,
+    ).toHaveLength(3);
+    expect(r.post("aircraft.snapshot").error.code).toBe("UNAUTHORIZED");
+  });
   it("persists facility/resource CRUD and structured checklists through the Apps Script action allowlist", () => {
     const r = runtime();
     const token = "e".repeat(64);
@@ -248,6 +290,8 @@ describe("actual Apps Script dispatcher against in-memory Sheets", () => {
         "ActivityLogs",
         "Settings",
         "ProcessedOperations",
+        "Aircraft",
+        "AircraftReports",
       ].sort(),
     );
     const count = r.sheets.get("Facilities")!.length;
