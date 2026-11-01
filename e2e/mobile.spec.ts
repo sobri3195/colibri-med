@@ -56,10 +56,10 @@ test("mobile protected destinations return after login and account exposes all m
   await nav.getByRole("link", { name: "Misi", exact: true }).click();
   await expect(page).toHaveURL(/\/mobile\/login$/);
   await expect(
-    page.getByRole("heading", { name: "Login petugas" }),
+    page.getByRole("heading", { name: "Masuk ke ruang koordinasi" }),
   ).toBeVisible();
-  await page.getByLabel("Peran demo").selectOption("Administrator");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page.getByRole("radio", { name: /^Administrator/ }).check();
+  await page.getByRole("button", { name: /^Masuk sebagai / }).click();
   await expect(page).toHaveURL(/\/mobile\/misi$/);
   await expect(
     page.getByRole("heading", { name: "Papan misi", exact: true }),
@@ -100,7 +100,7 @@ test("mobile session expiry keeps the mobile shell and login route", async ({
 }) => {
   await page.clock.install();
   await page.goto("/mobile/login");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page.getByRole("button", { name: /^Masuk sebagai / }).click();
   await expect(page).toHaveURL(/\/mobile$/);
   await page.clock.fastForward(3600001);
   await expect(page).toHaveURL(/\/mobile\/login$/);

@@ -2,19 +2,33 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { roles, type Actor, type Role } from "../types";
 import { mode, call } from "../services/api";
+import MobileDemoLogin from "./MobileDemoLogin";
 export default function Login({
   onLogin,
   destination = "/internal",
   initialRole = "Operator",
+  mobile = false,
 }: {
   onLogin: (a: Actor) => void;
   destination?: string;
   initialRole?: Role;
+  mobile?: boolean;
 }) {
   const [role, setRole] = useState(initialRole);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+  if (mobile && mode === "demo")
+    return (
+      <MobileDemoLogin
+        role={role}
+        onRoleChange={setRole}
+        onEnter={() => {
+          onLogin({ id: "demo:" + role, name: "Petugas Simulasi", role });
+          navigate(destination, { replace: true });
+        }}
+      />
+    );
   return (
     <section className="card login">
       <div className="eyebrow">RUANG KOORDINASI</div>
