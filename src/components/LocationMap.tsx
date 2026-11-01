@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-type Point = { name: string; lat: number; lng: number };
+type Point = {
+  name: string;
+  lat: number;
+  lng: number;
+  kind?: "facility" | "request";
+};
 const empty: Point[] = [];
 export default function LocationMap({
   locations = empty,
@@ -53,13 +58,27 @@ export default function LocationMap({
         Math.abs(p.lng) > 180
       )
         continue;
-      L.circleMarker([p.lat, p.lng], { radius: 8, color: "#0d9488" })
+      const marker = L.circleMarker([p.lat, p.lng], {
+        radius: 8,
+        color: p.kind === "request" ? "#102a43" : "#087f8c",
+        fillOpacity: 0.75,
+      })
         .bindPopup(
           Object.assign(document.createElement("span"), {
             textContent: p.name,
           }),
         )
         .addTo(layer);
+      const target = marker.getElement();
+      target?.setAttribute("tabindex", "0");
+      target?.setAttribute("role", "button");
+      target?.setAttribute("aria-label", `Buka lokasi ${p.name}`);
+      target?.addEventListener("keydown", (event) => {
+        if (["Enter", " "].includes((event as KeyboardEvent).key)) {
+          event.preventDefault();
+          marker.openPopup();
+        }
+      });
     }
   }, [locations]);
   const lat = selected?.[0],
@@ -89,6 +108,26 @@ export default function LocationMap({
   }, [lat, lng]);
   return (
     <>
+      <div className="map-legend">
+        {locations.some((p) => p.kind !== "request") && (
+          <span>
+            <i className="map-dot" />
+            Fasilitas / lokasi sintetis
+          </span>
+        )}
+        {locations.some((p) => p.kind === "request") && (
+          <span>
+            <i className="map-dot request" />
+            Permohonan
+          </span>
+        )}
+        {onPick && (
+          <span>
+            <i className="map-dot selected" />
+            Pilihan lokasi
+          </span>
+        )}
+      </div>
       <div ref={el} className="map" aria-label="Peta lokasi sintetis" />
       {failed && (
         <p role="status">

@@ -13,6 +13,8 @@ import {
   archiveOperation,
   archivedOperations,
 } from "../services/storage";
+import { StatusBadge } from "../components/MobileUI";
+import { CircleCheck, Clock } from "lucide-react";
 import RecordTable from "../components/RecordTable";
 import OperationalForm from "../features/OperationalForm";
 import MissionControls from "../features/MissionControls";
@@ -150,11 +152,15 @@ export default function Internal({
       query={search}
       status={filter}
       compact={compact}
+      requests={requests}
       onOpen={onOpen}
     />
   );
   return (
-    <div className={compact ? "workspace compact-workspace" : "workspace"}>
+    <div
+      data-section={section}
+      className={compact ? "workspace compact-workspace" : "workspace"}
+    >
       {!compact && (
         <aside>
           <div className="eyebrow">RUANG KOORDINASI</div>
@@ -204,7 +210,17 @@ export default function Internal({
         </div>
         <AsyncState {...poll} reload={() => void poll.refresh()} />
         {message && (
-          <div role="status" className="notice">
+          <div
+            role="status"
+            className={
+              "notice " +
+              (message === "Perubahan dicatat."
+                ? "feedback-success"
+                : /Error:|[A-Z_]{3,}:/.test(message)
+                  ? "feedback-error"
+                  : "")
+            }
+          >
             {message}
           </div>
         )}
@@ -229,18 +245,24 @@ export default function Internal({
           section,
         ) && (
           <div className="toolbar">
-            <input
-              aria-label="Cari data"
-              placeholder="Cari data tersimpan…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <input
-              aria-label="Filter status"
-              placeholder="Filter status (teks tepat)"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            />
+            <label className="search-field">
+              Cari data
+              <input
+                aria-label="Cari data"
+                placeholder="Cari data tersimpan…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </label>
+            <label className="search-field">
+              Filter status
+              <input
+                aria-label="Filter status"
+                placeholder="Filter status (teks tepat)"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              />
+            </label>
           </div>
         )}
         {section === "permohonan" && (
@@ -328,7 +350,7 @@ export default function Internal({
               <>
                 <p>
                   {String(request.summary)} ·{" "}
-                  <span className="badge">{request.status}</span>
+                  <StatusBadge status={request.status} />
                 </p>
                 <p>
                   Lokasi: {String(request.location)} · Akses:{" "}
@@ -414,7 +436,58 @@ export default function Internal({
                 {mission && (
                   <div className="inset">
                     <h3>Misi · {mission.status}</h3>
+                    <p className="record-reference">
+                      Misi {mission.id.slice(0, 8)} · Diperbarui{" "}
+                      {date(mission.updatedAt)}
+                    </p>
                     <p>Tim: {String(mission.team)}</p>
+                    <p>
+                      Asal: {String(request.facility)} · Lokasi:{" "}
+                      {String(request.location)}
+                    </p>
+                    <p className="muted">
+                      Jadwal dan tujuan penerbangan tidak tersedia pada record
+                      misi ini.
+                    </p>
+                    <details className="mission-history">
+                      <summary>Riwayat tahapan tercatat</summary>
+                      <ol>
+                        {(data.ActivityLogs ?? [])
+                          .filter((log) => log.entityId === mission.id)
+                          .slice()
+                          .sort((a, b) =>
+                            a.createdAt.localeCompare(b.createdAt),
+                          )
+                          .map((log, index, logs) => (
+                            <li key={log.id}>
+                              {index === logs.length - 1 &&
+                              log.status === mission.status ? (
+                                <Clock size={18} aria-hidden="true" />
+                              ) : (
+                                <CircleCheck size={18} aria-hidden="true" />
+                              )}
+                              <div>
+                                <strong>{log.status}</strong>
+                                <span>
+                                  {index === logs.length - 1 &&
+                                  log.status === mission.status
+                                    ? "Status saat ini"
+                                    : "Tahap tercatat"}{" "}
+                                  · {date(log.createdAt)}
+                                </span>
+                                {!!log.reason && <p>{String(log.reason)}</p>}
+                              </div>
+                            </li>
+                          ))}
+                      </ol>
+                      {!(data.ActivityLogs ?? []).some(
+                        (log) => log.entityId === mission.id,
+                      ) && <p>Belum ada riwayat tahapan tersimpan.</p>}
+                      <small>
+                        Hanya menampilkan kejadian tersimpan, tanpa perkiraan
+                        progres.
+                      </small>
+                    </details>
                     {allowed("Operator") && (
                       <MissionControls
                         mission={mission}
@@ -516,7 +589,10 @@ export default function Internal({
                       .includes(search.toLowerCase()),
                 )
                 .map((r) => ({
-                  name: String(r.name),
+                  name: String(r.name ?? r.facility ?? "Lokasi permohonan"),
+                  kind: requests.some((request) => request.id === r.id)
+                    ? ("request" as const)
+                    : ("facility" as const),
                   lat: Number(r.lat),
                   lng: Number(r.lng),
                 }))}

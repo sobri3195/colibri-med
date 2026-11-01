@@ -30,6 +30,7 @@ import {
   clearDemoSession,
 } from "./services/session";
 import "./styles.css";
+import "./mobile-experience.css";
 function App() {
   const [initialDemo] = useState(() =>
     mode === "demo" ? readDemoSession() : null,
@@ -128,7 +129,7 @@ function App() {
         isLeadership
           ? "app-shell mobile-app leadership-app"
           : isMobile
-            ? "app-shell mobile-app" +
+            ? "app-shell mobile-app coordination-app" +
               (location.pathname.replace(/\/+$/, "") === "/mobile/login" &&
               mode === "demo"
                 ? " demo-login-app"

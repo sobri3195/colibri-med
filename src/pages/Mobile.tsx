@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import {
   ArrowRight,
+  ArrowLeft,
   ClipboardPlus,
   House,
   MapPin,
@@ -21,6 +22,8 @@ import {
   LogOut,
 } from "lucide-react";
 import type { Actor } from "../types";
+import FlightAccent from "../components/FlightAccent";
+import MobileOverview from "../components/MobileOverview";
 import BrandMark from "../components/BrandMark";
 import { mode } from "../services/api";
 import Login from "./Login";
@@ -49,7 +52,7 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (!demoLogin || !navRef.current) return;
+    if (!navRef.current) return;
     const observer = new ResizeObserver(([entry]) => {
       shellRef.current?.style.setProperty(
         "--login-nav-height",
@@ -59,6 +62,16 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
     observer.observe(navRef.current);
     return () => observer.disconnect();
   }, [demoLogin]);
+  const isChild =
+    pathname.startsWith("/mobile/operasi") ||
+    pathname === "/mobile/tentang" ||
+    pathname === "/mobile/permohonan";
+  const backTo =
+    pathname === "/mobile/tentang"
+      ? "/mobile/akun"
+      : pathname === "/mobile/permohonan" && actor
+        ? "/mobile/operasi/permohonan"
+        : "/mobile/akun";
   const navigation = tabs.map((t) =>
     actor?.role === "Viewer pimpinan"
       ? t.path === "/mobile/misi"
@@ -116,6 +129,9 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
                 ? "Perangkat online"
                 : "Offline · gunakan draft lokal"}
             </span>
+            <span className="mode-chip">
+              {mode === "demo" ? "Mode demo" : "Mode connected"}
+            </span>
             {!!connection.pending && (
               <Link
                 to={
@@ -131,6 +147,12 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
             )}
           </div>
         </>
+      )}
+      {isChild && (
+        <Link className="mobile-back" to={backTo + context}>
+          <ArrowLeft size={18} aria-hidden="true" />
+          Kembali {backTo.includes("akun") ? "ke akun" : "ke permohonan"}
+        </Link>
       )}
       <div className="mobile-content">
         <Outlet />
@@ -176,40 +198,46 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
 export function MobileHome({ actor }: { actor: Actor | null }) {
   const context = requestSearch(useLocation().search);
   const viewer = actor?.role === "Viewer pimpinan";
+  const canCreate =
+    !actor || ["Operator", "Administrator"].includes(actor.role);
   return (
     <>
       <section className="mobile-welcome">
         <div className="eyebrow">
           {actor ? "RUANG KOORDINASI" : "COLIBRI MED / SIMULASI"}
         </div>
+        <p className="mobile-greeting">
+          {actor
+            ? `Selamat datang, ${actor.name}`
+            : "Selamat datang di COLIBRI MED"}
+        </p>
+        {actor && <span className="role-chip">{actor.role}</span>}
         <h1>
           Koordinasi dalam
           <br />
           <span>genggaman.</span>
         </h1>
         <p>Sistem Koordinasi Helikopter Dokter dan Evakuasi Medis Udara</p>
-        <div className="mobile-status">
-          <span aria-hidden="true">●</span> Mode{" "}
-          {mode === "demo" ? "demo lokal" : "connected"} · Data sintetis
-        </div>
+        <FlightAccent />
         <Link
           className="button"
           to={
             viewer
               ? "/pimpinan"
-              : actor
-                ? "/mobile/operasi" + context
-                : "/mobile/permohonan"
+              : canCreate
+                ? "/mobile/permohonan"
+                : "/mobile/operasi" + context
           }
         >
           {viewer
             ? "Buka pengawasan pimpinan"
-            : actor
-              ? "Buka ringkasan koordinasi"
-              : "Buat permohonan simulasi"}
+            : canCreate
+              ? "Buat permohonan simulasi"
+              : "Buka ringkasan koordinasi"}
           <ArrowRight size={18} />
         </Link>
       </section>
+      {actor && !viewer && <MobileOverview actor={actor} />}
       <section className="mobile-section">
         <div className="mobile-section-heading">
           <h2>Akses cepat</h2>
@@ -343,8 +371,17 @@ export function MobileAccount({
             Login petugas <ArrowRight size={17} />
           </Link>
         )}
-        {actor && <span className="badge">Sesi petugas aktif</span>}
+        {actor && (
+          <span className="badge">
+            {mode === "demo" ? "Sesi demo di tab ini" : "Sesi petugas aktif"}
+          </span>
+        )}
       </section>
+      {actor && (
+        <div className="mobile-section-heading">
+          <h2>Ruang kerja & preferensi</h2>
+        </div>
+      )}
       {actor && (
         <section className="mobile-menu" aria-label="Modul petugas">
           {["Viewer pimpinan", "Administrator"].includes(actor.role) && (
