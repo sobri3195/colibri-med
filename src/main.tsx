@@ -128,7 +128,11 @@ function App() {
         isLeadership
           ? "app-shell mobile-app leadership-app"
           : isMobile
-            ? "app-shell mobile-app"
+            ? "app-shell mobile-app" +
+              (location.pathname.replace(/\/+$/, "") === "/mobile/login" &&
+              mode === "demo"
+                ? " demo-login-app"
+                : "")
             : "app-shell"
       }
     >

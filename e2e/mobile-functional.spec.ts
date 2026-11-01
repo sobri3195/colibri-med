@@ -45,8 +45,8 @@ async function login(page: Page, role = "Administrator") {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route("**/tile.openstreetmap.org/**", (r) => r.abort());
   await page.goto("/mobile/login");
-  await page.getByRole("combobox", { name: "Peran demo" }).selectOption(role);
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page.getByRole("radio", { name: role, exact: false }).check();
+  await page.getByRole("button", { name: /^Masuk sebagai / }).click();
   await expect(page).toHaveURL(/\/mobile$/);
 }
 async function module(page: Page, name: string) {
@@ -89,9 +89,9 @@ test("mobile completes a newly submitted request through team changes, reviews, 
   await receipt.click();
   await expect(page).toHaveURL(/\/mobile\/login$/);
   await page
-    .getByRole("combobox", { name: "Peran demo" })
-    .selectOption("Administrator");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+    .getByRole("radio", { name: "Administrator", exact: false })
+    .check();
+  await page.getByRole("button", { name: /^Masuk sebagai / }).click();
   await expect(
     page.getByRole("combobox", { name: "Pilih permohonan" }),
   ).toHaveValue(requestId);
@@ -244,9 +244,9 @@ test("mobile offline submissions survive reload, retry without duplicates and is
   ).toBeVisible();
   await page.getByRole("link", { name: "Buka melalui akun petugas" }).click();
   await page
-    .getByRole("combobox", { name: "Peran demo" })
-    .selectOption("Administrator");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+    .getByRole("radio", { name: "Administrator", exact: false })
+    .check();
+  await page.getByRole("button", { name: /^Masuk sebagai / }).click();
   await page.getByLabel("Cari data", { exact: true }).fill("RS Offline Mobile");
   const list = page.locator("section").filter({
     has: page.getByRole("heading", {
@@ -354,9 +354,9 @@ test("mobile preferences persist per user, role controls remain restricted and u
   await page.getByRole("button", { name: "Keluar", exact: true }).click();
   await page.getByRole("link", { name: "Login petugas" }).click();
   await page
-    .getByRole("combobox", { name: "Peran demo" })
-    .selectOption("Dokter/perawat");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+    .getByRole("radio", { name: "Dokter/perawat", exact: false })
+    .check();
+  await page.getByRole("button", { name: /^Masuk sebagai / }).click();
   await module(page, "Pengaturan");
   await expect(
     page.getByRole("combobox", { name: "Interval polling" }),

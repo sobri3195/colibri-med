@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   Link,
   Navigate,
@@ -45,6 +45,20 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
   const pathname = location.pathname.replace(/\/+$/, "") || "/";
   const context = requestSearch(location.search);
   const connection = useConnection(actor, pathname);
+  const demoLogin = pathname === "/mobile/login" && mode === "demo";
+  const shellRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!demoLogin || !navRef.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      shellRef.current?.style.setProperty(
+        "--login-nav-height",
+        `${entry.target.getBoundingClientRect().height}px`,
+      );
+    });
+    observer.observe(navRef.current);
+    return () => observer.disconnect();
+  }, [demoLogin]);
   const navigation = tabs.map((t) =>
     actor?.role === "Viewer pimpinan"
       ? t.path === "/mobile/misi"
@@ -62,53 +76,70 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
     window.scrollTo(0, 0);
   }, [pathname]);
   return (
-    <div className="mobile-shell">
-      <header className="mobile-header">
-        <Link className="brand" to="/mobile" aria-label="COLIBRI MED mobile">
-          <BrandMark />
-          <div>
-            COLIBRI <b>MED</b>
-            <small>KOORDINASI MEDIS UDARA</small>
-          </div>
-        </Link>
-        <Link
-          className="mobile-profile"
-          to="/mobile/akun"
-          aria-label="Buka akun"
-          title={actor?.role ?? "Akun petugas"}
-        >
-          <UserRound size={21} />
-        </Link>
-      </header>
-      <div
-        className={
-          connection.online ? "mobile-connection" : "mobile-connection offline"
-        }
-        role="status"
-      >
-        <span>
-          {connection.online
-            ? "Perangkat online"
-            : "Offline · gunakan draft lokal"}
-        </span>
-        {!!connection.pending && (
-          <Link
-            to={
-              actor?.role === "Viewer pimpinan"
-                ? "/pimpinan"
-                : actor
-                  ? "/mobile/operasi/outbox" + context
-                  : "/mobile/permohonan"
+    <div
+      ref={shellRef}
+      className={demoLogin ? "mobile-shell demo-login-shell" : "mobile-shell"}
+    >
+      {!demoLogin && (
+        <>
+          <header className="mobile-header">
+            <Link
+              className="brand"
+              to="/mobile"
+              aria-label="COLIBRI MED mobile"
+            >
+              <BrandMark />
+              <div>
+                COLIBRI <b>MED</b>
+                <small>KOORDINASI MEDIS UDARA</small>
+              </div>
+            </Link>
+            <Link
+              className="mobile-profile"
+              to="/mobile/akun"
+              aria-label="Buka akun"
+              title={actor?.role ?? "Akun petugas"}
+            >
+              <UserRound size={21} />
+            </Link>
+          </header>
+          <div
+            className={
+              connection.online
+                ? "mobile-connection"
+                : "mobile-connection offline"
             }
+            role="status"
           >
-            {connection.pending} operasi tertunda
-          </Link>
-        )}
-      </div>
+            <span>
+              {connection.online
+                ? "Perangkat online"
+                : "Offline · gunakan draft lokal"}
+            </span>
+            {!!connection.pending && (
+              <Link
+                to={
+                  actor?.role === "Viewer pimpinan"
+                    ? "/pimpinan"
+                    : actor
+                      ? "/mobile/operasi/outbox" + context
+                      : "/mobile/permohonan"
+                }
+              >
+                {connection.pending} operasi tertunda
+              </Link>
+            )}
+          </div>
+        </>
+      )}
       <div className="mobile-content">
         <Outlet />
       </div>
-      <nav className="bottom-navigation" aria-label="Navigasi bawah">
+      <nav
+        ref={navRef}
+        className="bottom-navigation"
+        aria-label="Navigasi bawah"
+      >
         {navigation.map(({ path, label, icon: Icon }) => {
           const active =
             label === "Permohonan" && pathname === "/mobile/permohonan"
@@ -280,7 +311,7 @@ export function MobileLogin({ onLogin }: { onLogin: (a: Actor) => void }) {
   const location = useLocation();
   const from = location.state?.from;
   const destination = mobileDestination(from);
-  return <Login onLogin={onLogin} destination={destination} />;
+  return <Login mobile onLogin={onLogin} destination={destination} />;
 }
 export function MobileAccount({
   actor,
