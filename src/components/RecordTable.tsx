@@ -1,3 +1,4 @@
+import { actionLabel, listDate } from "../lib/presentation";
 import { useState } from "react";
 import type { RecordData } from "../types";
 import { EmptyState, StatusBadge } from "./MobileUI";
@@ -9,6 +10,7 @@ export default function RecordTable({
   compact = false,
   onOpen,
   requests = [],
+  selectedId,
 }: {
   items: RecordData[];
   query?: string;
@@ -16,6 +18,7 @@ export default function RecordTable({
   compact?: boolean;
   onOpen?: (record: RecordData) => void;
   requests?: RecordData[];
+  selectedId?: string;
 }) {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
@@ -44,15 +47,21 @@ export default function RecordTable({
           {rows.slice(current * size, (current + 1) * size).map((r) => {
             const request = requests.find((item) => item.id === r.requestId);
             return (
-              <article className="mobile-record" key={r.id}>
+              <article
+                className="mobile-record"
+                data-selected={r.id === selectedId}
+                key={r.id}
+              >
                 <div>
                   <strong>
                     {String(
                       r.facility ??
                         r.name ??
                         r.team ??
-                        r.action ??
-                        "Record sintetis",
+                        (r.action
+                          ? actionLabel(String(r.action))
+                          : undefined) ??
+                        "Catatan sintetis",
                     )}
                   </strong>
                   <StatusBadge status={r.status} />
@@ -69,14 +78,23 @@ export default function RecordTable({
                 {r.destination !== undefined && (
                   <p>Tujuan · {String(r.destination)}</p>
                 )}
-                <small>Diperbarui {date(r.updatedAt)}</small>
+                <small>
+                  Diperbarui{" "}
+                  <time dateTime={r.updatedAt} title={date(r.updatedAt)}>
+                    {listDate(r.updatedAt)}
+                  </time>
+                </small>
                 {r.text !== undefined && <p>{String(r.text)}</p>}
                 {r.location !== undefined && (
                   <p>Lokasi: {String(r.location)}</p>
                 )}
                 {onOpen && (
-                  <button className="secondary" onClick={() => onOpen(r)}>
-                    Buka permohonan {r.id.slice(0, 8)}
+                  <button
+                    className="secondary"
+                    aria-expanded={r.id === selectedId}
+                    onClick={() => onOpen(r)}
+                  >
+                    Lihat detail {r.id.slice(0, 8)}
                   </button>
                 )}
               </article>
@@ -104,7 +122,9 @@ export default function RecordTable({
                         r.facility ??
                         r.text ??
                         r.team ??
-                        r.action ??
+                        (r.action
+                          ? actionLabel(String(r.action))
+                          : undefined) ??
                         r.requestId ??
                         "—",
                     )}
@@ -116,7 +136,7 @@ export default function RecordTable({
                     )}
                   </td>
                   <td>
-                    <span className="badge">● {r.status}</span>
+                    <StatusBadge status={r.status} />
                   </td>
                   <td>{date(r.updatedAt)}</td>
                 </tr>

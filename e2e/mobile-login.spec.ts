@@ -39,7 +39,10 @@ for (const [width, height] of [
     const navBox = await page
       .getByRole("navigation", { name: "Navigasi bawah" })
       .boundingBox();
-    expect(footerBox!.y + footerBox!.height).toBeLessThanOrEqual(navBox!.y);
+    if (width >= 1100)
+      expect(footerBox!.x).toBeGreaterThanOrEqual(navBox!.x + navBox!.width);
+    else
+      expect(footerBox!.y + footerBox!.height).toBeLessThanOrEqual(navBox!.y);
     await expect(
       page.getByRole("link", { name: "Akun", exact: true }),
     ).toHaveAttribute("aria-current", "page");

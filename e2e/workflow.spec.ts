@@ -144,7 +144,7 @@ test("mobile form, denied geolocation and unavailable tiles remain usable", asyn
   ).toBeVisible();
   await page.getByRole("button", { name: "Simpan draft", exact: true }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Tersimpan lokal" }),
+    page.getByRole("status").filter({ hasText: "Tersimpan di perangkat" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Kirim permohonan simulasi" }).click();
   await expect(
@@ -176,7 +176,7 @@ test("offline outbox retry and actor isolation", async ({ page, context }) => {
     .getByRole("button", { name: "Permohonan → Diterima Operator" })
     .click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Menunggu jaringan" }),
+    page.getByRole("status").filter({ hasText: "Menunggu sinkronisasi" }),
   ).toBeVisible();
   await context.setOffline(false);
   await page.getByRole("link", { name: "Outbox & notifikasi" }).click();

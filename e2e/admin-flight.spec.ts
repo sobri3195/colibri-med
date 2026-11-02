@@ -65,7 +65,7 @@ test("admin records and reads crew reports, retains reported coordinates after r
   await page.getByLabel("Bujur laporan (opsional)").fill("106.895");
   await page.getByRole("button", { name: "Kirim laporan awak" }).click();
   await expect(
-    page.getByText("Laporan awak tercatat di demo lokal.", { exact: true }),
+    page.getByText("Laporan awak tersimpan di perangkat.", { exact: true }),
   ).toBeVisible();
   await expect(page.getByTestId("position-SIM-HELI-02")).toContainText(
     "-6.22500, 106.89500",
@@ -145,7 +145,7 @@ test("crew report offline operations retry once and become visible to the admin"
   ).toBeDisabled();
   await expect(
     page.getByText(
-      "Menunggu jaringan/pengiriman di Outbox. Jangan membuat laporan duplikat.",
+      "Menunggu sinkronisasi di Outbox. Jangan membuat laporan duplikat.",
       { exact: true },
     ),
   ).toBeVisible();

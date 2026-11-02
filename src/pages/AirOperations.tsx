@@ -1,3 +1,4 @@
+import { StatusBadge } from "../components/MobileUI";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Link,
@@ -89,6 +90,9 @@ export default function AirOperations({
   const [params, setParams] = useSearchParams();
   const [snapshot, setSnapshot] = useState<AviationSnapshot | null>(null);
   const [running, setRunning] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(
+    () => !mobile || window.matchMedia("(min-width: 1100px)").matches,
+  );
   const [tick, setTick] = useState(0);
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
@@ -205,38 +209,19 @@ export default function AirOperations({
           beralih ke data demo.
         </p>
       )}
-      <div className="notice air-simulation">
-        <ShieldCheck size={21} />
-        <div>
-          <strong>SIMULASI PERGERAKAN — DATA SINTETIS</strong>
-          <p>
-            Tidak terhubung GPS, ADS-B, sensor, atau armada nyata. Animasi hanya
-            ilustrasi lokal dan tidak mengubah data posisi yang dilaporkan, izin
-            penerbangan, atau status misi.
-          </p>
-        </div>
-      </div>
+      <details className="notice air-simulation">
+        <summary>
+          <ShieldCheck size={18} aria-hidden="true" /> Simulasi data sintetis ·
+          tanpa pelacakan langsung
+        </summary>
+        <p>
+          Tidak terhubung GPS, ADS-B, sensor, atau armada nyata. Animasi hanya
+          ilustrasi lokal dan tidak mengubah data posisi yang dilaporkan, izin
+          penerbangan, atau status misi.
+        </p>
+      </details>
       {snapshot && (
         <>
-          <div className="air-summary">
-            <article>
-              <Plane size={20} />
-              <strong>{aircraft.length}</strong>
-              <span>Helikopter sintetis</span>
-            </article>
-            <article>
-              <FileText size={20} />
-              <strong>{snapshot.reports.length}</strong>
-              <span>Laporan tercatat</span>
-            </article>
-            <article>
-              <Activity size={20} />
-              <strong>
-                {running ? "Berjalan" : tick ? "Jeda" : "Nonaktif"}
-              </strong>
-              <span>Animasi lokal</span>
-            </article>
-          </div>
           {aircraft.length === 0 ? (
             <section className="card">
               <h2>Belum ada helikopter sintetis</h2>
@@ -258,7 +243,7 @@ export default function AirOperations({
                   </option>
                   {aircraft.map((a) => (
                     <option value={a.id} key={a.id}>
-                      {a.demoCode} · {a.name}
+                      {a.demoCode} · {a.name} · {a.status}
                     </option>
                   ))}
                 </select>
@@ -270,7 +255,7 @@ export default function AirOperations({
                 </p>
               )}
               {!reportPanel && (
-                <>
+                <div className="air-monitor-layout">
                   <section className="card air-map-card">
                     <div className="air-map-heading">
                       <h2>Peta pemantauan simulasi</h2>
@@ -316,54 +301,111 @@ export default function AirOperations({
                       select={select}
                       playback={running || tick > 0}
                     />
-                  </section>
-                  <section
-                    className="aircraft-list"
-                    aria-label="Daftar helikopter sintetis"
-                  >
-                    {aircraft.map((a) => {
-                      const marker = markers.find((m) => m.id === a.id)!;
-                      return (
-                        <article
+                    {current && (
+                      <div className="air-selected-summary">
+                        <span className="eyebrow">{current.demoCode}</span>
+                        <h3>{current.name}</h3>
+                        <StatusBadge status={current.status} />
+                        <p>
+                          Laporan terakhir:{" "}
+                          {(() => {
+                            const latest = (snapshot.reports ?? [])
+                              .filter((r) => r.aircraftId === current.id)
+                              .sort((a, b) =>
+                                b.reportedAt.localeCompare(a.reportedAt),
+                              )[0];
+                            return latest
+                              ? date(latest.reportedAt)
+                              : "Belum ada laporan";
+                          })()}
+                        </p>
+                        <span
                           className={
-                            selected === a.id
-                              ? "card aircraft-card selected"
-                              : "card aircraft-card"
+                            running || tick
+                              ? "playback-label"
+                              : "stored-position-label"
                           }
-                          key={a.id}
                         >
-                          <div>
-                            <span className="eyebrow">{a.demoCode}</span>
-                            <span className="badge">{a.status}</span>
-                          </div>
-                          <h2>{a.name}</h2>
-                          <p data-testid={"position-" + a.demoCode}>
-                            {running || tick
-                              ? "Ilustrasi: "
-                              : "Posisi laporan: "}
-                            {marker.lat.toFixed(5)}, {marker.lng.toFixed(5)}
-                          </p>
-                          <small>
-                            Posisi laporan tersimpan: {a.lat.toFixed(5)},{" "}
-                            {a.lng.toFixed(5)}
-                            <br />
-                            Posisi dicatat:{" "}
-                            {a.positionReportedAt
-                              ? date(a.positionReportedAt)
-                              : "Belum tersedia"}
-                          </small>
-                          <button
-                            className="secondary"
-                            onClick={() => select(a.id)}
-                          >
-                            Pilih {a.demoCode}
-                          </button>
-                        </article>
-                      );
-                    })}
+                          {running || tick
+                            ? "Animasi pergerakan lokal · bukan posisi tersimpan"
+                            : "Posisi laporan tersimpan · data sintetis"}
+                        </span>
+                      </div>
+                    )}
                   </section>
-                </>
+                  <details
+                    className="aircraft-detail-panel"
+                    open={detailsOpen}
+                    onToggle={(e) => setDetailsOpen(e.currentTarget.open)}
+                  >
+                    <summary>Detail & posisi helikopter</summary>
+                    <section
+                      className="aircraft-list"
+                      aria-label="Daftar helikopter sintetis"
+                    >
+                      {aircraft.map((a) => {
+                        const marker = markers.find((m) => m.id === a.id)!;
+                        return (
+                          <article
+                            className={
+                              selected === a.id
+                                ? "card aircraft-card selected"
+                                : "card aircraft-card"
+                            }
+                            key={a.id}
+                          >
+                            <div>
+                              <span className="eyebrow">{a.demoCode}</span>
+                              <StatusBadge status={a.status} />
+                            </div>
+                            <h2>{a.name}</h2>
+                            <p data-testid={"position-" + a.demoCode}>
+                              {running || tick
+                                ? "Ilustrasi: "
+                                : "Posisi laporan: "}
+                              {marker.lat.toFixed(5)}, {marker.lng.toFixed(5)}
+                            </p>
+                            <small>
+                              Posisi laporan tersimpan: {a.lat.toFixed(5)},{" "}
+                              {a.lng.toFixed(5)}
+                              <br />
+                              Posisi dicatat:{" "}
+                              {a.positionReportedAt
+                                ? date(a.positionReportedAt)
+                                : "Belum tersedia"}
+                            </small>
+                            <button
+                              className="secondary"
+                              onClick={() => select(a.id)}
+                            >
+                              Pilih {a.demoCode}
+                            </button>
+                          </article>
+                        );
+                      })}
+                    </section>
+                  </details>
+                </div>
               )}
+              <div className="air-summary">
+                <article>
+                  <Plane size={20} />
+                  <strong>{aircraft.length}</strong>
+                  <span>Helikopter sintetis</span>
+                </article>
+                <article>
+                  <FileText size={20} />
+                  <strong>{snapshot.reports.length}</strong>
+                  <span>Laporan tercatat</span>
+                </article>
+                <article>
+                  <Activity size={20} />
+                  <strong>
+                    {running ? "Berjalan" : tick ? "Jeda" : "Nonaktif"}
+                  </strong>
+                  <span>Animasi lokal</span>
+                </article>
+              </div>
               {current && (
                 <section className="card aircraft-report-list">
                   <div className="air-map-heading">

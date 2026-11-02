@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useNavigationClearance } from "../features/useNavigationClearance";
+import { useEffect } from "react";
 import {
   Link,
   Navigate,
@@ -23,7 +24,9 @@ import {
 } from "lucide-react";
 import type { Actor } from "../types";
 import FlightAccent from "../components/FlightAccent";
-import MobileOverview from "../components/MobileOverview";
+import MobileOverview, {
+  LeadershipPreview,
+} from "../components/MobileOverview";
 import BrandMark from "../components/BrandMark";
 import { mode } from "../services/api";
 import Login from "./Login";
@@ -49,19 +52,7 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
   const context = requestSearch(location.search);
   const connection = useConnection(actor, pathname);
   const demoLogin = pathname === "/mobile/login" && mode === "demo";
-  const shellRef = useRef<HTMLDivElement>(null);
-  const navRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (!navRef.current) return;
-    const observer = new ResizeObserver(([entry]) => {
-      shellRef.current?.style.setProperty(
-        "--login-nav-height",
-        `${entry.target.getBoundingClientRect().height}px`,
-      );
-    });
-    observer.observe(navRef.current);
-    return () => observer.disconnect();
-  }, [demoLogin]);
+  const { shellRef, navRef } = useNavigationClearance();
   const isChild =
     pathname.startsWith("/mobile/operasi") ||
     pathname === "/mobile/tentang" ||
@@ -125,9 +116,7 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
             role="status"
           >
             <span>
-              {connection.online
-                ? "Perangkat online"
-                : "Offline · gunakan draft lokal"}
+              {connection.online ? "Perangkat online" : "Perangkat offline"}
             </span>
             <span className="mode-chip">
               {mode === "demo" ? "Mode demo" : "Mode connected"}
@@ -202,7 +191,9 @@ export function MobileHome({ actor }: { actor: Actor | null }) {
     !actor || ["Operator", "Administrator"].includes(actor.role);
   return (
     <>
-      <section className="mobile-welcome">
+      <section
+        className={actor ? "mobile-welcome work-welcome" : "mobile-welcome"}
+      >
         <div className="eyebrow">
           {actor ? "RUANG KOORDINASI" : "COLIBRI MED / SIMULASI"}
         </div>
@@ -213,31 +204,54 @@ export function MobileHome({ actor }: { actor: Actor | null }) {
         </p>
         {actor && <span className="role-chip">{actor.role}</span>}
         <h1>
-          Koordinasi dalam
-          <br />
-          <span>genggaman.</span>
+          {actor ? (
+            viewer ? (
+              "Ringkasan pengawasan"
+            ) : (
+              "Ruang kerja koordinasi"
+            )
+          ) : (
+            <>
+              Koordinasi dalam
+              <br />
+              <span>genggaman.</span>
+            </>
+          )}
         </h1>
-        <p>Sistem Koordinasi Helikopter Dokter dan Evakuasi Medis Udara</p>
+        <p>
+          {actor
+            ? "Tinjau pekerjaan dan lanjutkan koordinasi sesuai peran Anda."
+            : "Sistem Koordinasi Helikopter Dokter dan Evakuasi Medis Udara"}
+        </p>
         <FlightAccent />
         <Link
           className="button"
           to={
             viewer
               ? "/pimpinan"
-              : canCreate
-                ? "/mobile/permohonan"
-                : "/mobile/operasi" + context
+              : actor
+                ? (canCreate
+                    ? "/mobile/operasi/permohonan"
+                    : "/mobile/operasi/penilaian") + context
+                : "/mobile/permohonan"
           }
         >
           {viewer
             ? "Buka pengawasan pimpinan"
-            : canCreate
-              ? "Buat permohonan simulasi"
-              : "Buka ringkasan koordinasi"}
+            : actor
+              ? canCreate
+                ? "Tinjau permohonan"
+                : "Buka penilaian & koordinasi"
+              : "Buat permohonan simulasi"}
           <ArrowRight size={18} />
         </Link>
       </section>
-      {actor && !viewer && <MobileOverview actor={actor} />}
+      {actor &&
+        (viewer ? (
+          <LeadershipPreview actor={actor} />
+        ) : (
+          <MobileOverview actor={actor} />
+        ))}
       <section className="mobile-section">
         <div className="mobile-section-heading">
           <h2>Akses cepat</h2>
