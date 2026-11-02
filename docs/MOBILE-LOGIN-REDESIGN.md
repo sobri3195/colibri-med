@@ -1,5 +1,7 @@
 # Redesign login demo mobile
 
+Catatan ini mendokumentasikan perubahan login awal. Lihat [desain pengalaman mobile](MOBILE-EXPERIENCE-DESIGN.md) untuk cakupan seluruh halaman dan hasil regresi terbaru.
+
 Halaman `/mobile/login` menggunakan identitas medis udara, kartu peran radio native, tombol dinamis, ilustrasi helikopter generik lokal, dan layout dua panel mulai 700px. Grid peran menjadi dua kolom mulai 1100px. Logo asli dipertahankan; ilustrasi tidak mengklaim akurasi model Colibri.
 
 ## Audit dan batas perubahan

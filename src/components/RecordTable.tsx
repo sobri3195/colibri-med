@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { RecordData } from "../types";
+import { EmptyState, StatusBadge } from "./MobileUI";
 import { date } from "../lib/domain";
 export default function RecordTable({
   items,
@@ -7,12 +8,14 @@ export default function RecordTable({
   status = "",
   compact = false,
   onOpen,
+  requests = [],
 }: {
   items: RecordData[];
   query?: string;
   status?: string;
   compact?: boolean;
   onOpen?: (record: RecordData) => void;
+  requests?: RecordData[];
 }) {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
@@ -29,37 +32,56 @@ export default function RecordTable({
   const last = Math.max(0, Math.ceil(rows.length / size) - 1);
   const current = Math.min(page, last);
   if (!items.length)
-    return <p className="empty">Belum ada data untuk ditampilkan.</p>;
+    return (
+      <EmptyState title="Belum ada data untuk ditampilkan.">
+        Data akan muncul setelah dicatat melalui alur koordinasi.
+      </EmptyState>
+    );
   return (
     <>
       {compact ? (
         <div className="mobile-record-list">
-          {rows.slice(current * size, (current + 1) * size).map((r) => (
-            <article className="mobile-record" key={r.id}>
-              <div>
-                <strong>
-                  {String(
-                    r.facility ??
-                      r.name ??
-                      r.team ??
-                      r.action ??
-                      "Record sintetis",
-                  )}
-                </strong>
-                <span className="badge">{r.status}</span>
-              </div>
-              <small>
-                Referensi {r.id.slice(0, 8)} · {date(r.updatedAt)}
-              </small>
-              {r.text !== undefined && <p>{String(r.text)}</p>}
-              {r.location !== undefined && <p>Lokasi: {String(r.location)}</p>}
-              {onOpen && (
-                <button className="secondary" onClick={() => onOpen(r)}>
-                  Buka permohonan {r.id.slice(0, 8)}
-                </button>
-              )}
-            </article>
-          ))}
+          {rows.slice(current * size, (current + 1) * size).map((r) => {
+            const request = requests.find((item) => item.id === r.requestId);
+            return (
+              <article className="mobile-record" key={r.id}>
+                <div>
+                  <strong>
+                    {String(
+                      r.facility ??
+                        r.name ??
+                        r.team ??
+                        r.action ??
+                        "Record sintetis",
+                    )}
+                  </strong>
+                  <StatusBadge status={r.status} />
+                </div>
+                <small className="record-reference">
+                  {r.requestId && r.team ? "Misi" : "Referensi"}{" "}
+                  {r.id.slice(0, 8)}
+                </small>
+                {!!(r.facility || request?.facility) && (
+                  <p className="record-route">
+                    Asal · {String(r.facility ?? request?.facility)}
+                  </p>
+                )}
+                {r.destination !== undefined && (
+                  <p>Tujuan · {String(r.destination)}</p>
+                )}
+                <small>Diperbarui {date(r.updatedAt)}</small>
+                {r.text !== undefined && <p>{String(r.text)}</p>}
+                {r.location !== undefined && (
+                  <p>Lokasi: {String(r.location)}</p>
+                )}
+                {onOpen && (
+                  <button className="secondary" onClick={() => onOpen(r)}>
+                    Buka permohonan {r.id.slice(0, 8)}
+                  </button>
+                )}
+              </article>
+            );
+          })}
         </div>
       ) : (
         <div className="table-wrap">
@@ -104,7 +126,9 @@ export default function RecordTable({
         </div>
       )}
       {!rows.length ? (
-        <p>Tidak ada hasil sesuai filter.</p>
+        <EmptyState title="Tidak ada hasil sesuai filter.">
+          Coba kata kunci lain atau kosongkan filter status.
+        </EmptyState>
       ) : (
         <nav className="pagination" aria-label="Navigasi halaman tabel">
           <span>

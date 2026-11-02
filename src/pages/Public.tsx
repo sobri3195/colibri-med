@@ -169,6 +169,7 @@ const empty = {
 export function RequestForm({ actor = null }: { actor?: Actor | null }) {
   const [form, setForm] = useState(empty);
   const [notice, setNotice] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
@@ -217,17 +218,28 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
       </section>
     );
   return (
-    <section className="card">
+    <section className="card request-page">
       <div className="eyebrow">PERMOHONAN SIMULASI</div>
       <h1>Mulai koordinasi</h1>
       <p>
         Gunakan identitas dan kebutuhan sintetis. Jangan masukkan data pasien
         nyata.
       </p>
+      <p className="form-help">
+        Isian bertanda * wajib diisi. Data hanya untuk simulasi.
+      </p>
       <form
+        onInvalid={(e) => {
+          const input = e.target as HTMLInputElement;
+          setFieldErrors((errors) => ({
+            ...errors,
+            [input.name]: input.validationMessage,
+          }));
+        }}
         onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
+          setFieldErrors({});
           try {
             const p = requestSchema.parse(form);
             const r = await submit(actor, "requests.create", { data: p });
@@ -243,11 +255,32 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
                     ". Belum diterima operator dan belum ada penugasan.",
             );
           } catch (e) {
-            if (e && typeof e === "object" && "issues" in e)
+            if (e && typeof e === "object" && "issues" in e) {
+              const messages: Record<string, string> = {
+                name: "Isi nama sintetis minimal 3 karakter.",
+                facility: "Isi fasilitas asal minimal 3 karakter.",
+                location: "Isi deskripsi lokasi minimal 3 karakter.",
+                summary: "Isi ringkasan minimal 5 karakter.",
+                patients: "Jumlah pasien harus berupa bilangan bulat 1–100.",
+                lat: "Isi lintang −90 hingga 90 dan bujur −180 hingga 180 secara berpasangan.",
+                lng: "Isi bujur −180 hingga 180 dan lintang secara berpasangan.",
+              };
+              const issues = e.issues as { path: PropertyKey[] }[];
+              setFieldErrors(
+                Object.fromEntries(
+                  issues.map((issue) => {
+                    const key = String(issue.path[0]);
+                    return [key, messages[key] ?? "Periksa isian ini."];
+                  }),
+                ),
+              );
+              document
+                .getElementById("request-" + String(issues[0]?.path[0]))
+                ?.focus();
               setNotice(
                 "Periksa isian: nama/fasilitas/lokasi wajib, jumlah pasien 1–100, dan koordinat harus berpasangan.",
               );
-            else {
+            } else {
               setNotice(String(e));
               if (
                 ["NETWORK", "UPSTREAM", "BUSY", "PARTIAL_FAILURE"].includes(
@@ -262,102 +295,169 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
           }
         }}
       >
-        <div className="grid two">
-          {[
-            ["name", "Nama pemohon sintetis"],
-            ["contact", "Kontak contoh"],
-            ["facility", "Fasilitas asal"],
-            ["patients", "Jumlah pasien"],
-            ["location", "Deskripsi lokasi"],
-            ["access", "Informasi akses"],
-            ["lat", "Lintang (opsional)"],
-            ["lng", "Bujur (opsional)"],
-          ].map(([key, label]) => (
-            <label key={key}>
-              {label}
-              <input
-                required={!["lat", "lng", "access"].includes(key)}
-                type={
-                  ["patients", "lat", "lng"].includes(key) ? "number" : "text"
-                }
-                min={
-                  key === "patients"
-                    ? 1
-                    : key === "lat"
-                      ? -90
-                      : key === "lng"
-                        ? -180
-                        : undefined
-                }
-                max={
-                  key === "patients"
-                    ? 100
-                    : key === "lat"
-                      ? 90
-                      : key === "lng"
-                        ? 180
-                        : undefined
-                }
-                step={
-                  key === "patients"
-                    ? 1
-                    : ["lat", "lng"].includes(key)
-                      ? "any"
-                      : undefined
-                }
-                maxLength={
-                  key === "name" || key === "contact"
-                    ? 100
-                    : key === "facility"
-                      ? 150
-                      : key === "location"
-                        ? 300
-                        : 500
-                }
-                value={form[key as keyof typeof form]}
-                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-              />
-            </label>
-          ))}
-        </div>
-        <label>
-          Ringkasan kebutuhan
-          <textarea
-            required
-            value={form.summary}
-            maxLength={2000}
-            onChange={(e) => setForm({ ...form, summary: e.target.value })}
-          />
-        </label>
-        <LocationMap
-          onPick={pick}
-          selected={
-            form.lat !== "" && form.lng !== ""
-              ? [Number(form.lat), Number(form.lng)]
-              : undefined
-          }
-        />
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => {
-            if (!navigator.geolocation) {
-              setNotice(
-                "Lokasi perangkat tidak didukung; isi koordinat manual.",
-              );
-              return;
+        {[
+          {
+            title: "Identitas & fasilitas",
+            fields: [
+              ["name", "Nama pemohon sintetis"],
+              ["contact", "Kontak contoh"],
+              ["facility", "Fasilitas asal"],
+              ["patients", "Jumlah pasien"],
+            ],
+          },
+          {
+            title: "Lokasi & akses",
+            fields: [
+              ["location", "Deskripsi lokasi"],
+              ["access", "Informasi akses"],
+              ["lat", "Lintang (opsional)"],
+              ["lng", "Bujur (opsional)"],
+            ],
+          },
+        ].map(({ title, fields }) => (
+          <fieldset className="form-section" key={title}>
+            <legend>{title}</legend>
+            <div className="grid two">
+              {fields.map(([key, label]) => (
+                <label key={key}>
+                  <span>
+                    {label}
+                    {!["lat", "lng", "access"].includes(key) && (
+                      <span aria-hidden="true" className="required-mark">
+                        {" "}
+                        *
+                      </span>
+                    )}
+                  </span>
+                  <input
+                    id={"request-" + key}
+                    name={key}
+                    aria-label={label}
+                    aria-invalid={!!fieldErrors[key]}
+                    aria-describedby={
+                      fieldErrors[key] ? "request-error-" + key : undefined
+                    }
+                    required={!["lat", "lng", "access"].includes(key)}
+                    type={
+                      ["patients", "lat", "lng"].includes(key)
+                        ? "number"
+                        : "text"
+                    }
+                    min={
+                      key === "patients"
+                        ? 1
+                        : key === "lat"
+                          ? -90
+                          : key === "lng"
+                            ? -180
+                            : undefined
+                    }
+                    max={
+                      key === "patients"
+                        ? 100
+                        : key === "lat"
+                          ? 90
+                          : key === "lng"
+                            ? 180
+                            : undefined
+                    }
+                    step={
+                      key === "patients"
+                        ? 1
+                        : ["lat", "lng"].includes(key)
+                          ? "any"
+                          : undefined
+                    }
+                    maxLength={
+                      key === "name" || key === "contact"
+                        ? 100
+                        : key === "facility"
+                          ? 150
+                          : key === "location"
+                            ? 300
+                            : 500
+                    }
+                    value={form[key as keyof typeof form]}
+                    onChange={(e) => {
+                      setForm({ ...form, [key]: e.target.value });
+                      setFieldErrors((errors) => ({ ...errors, [key]: "" }));
+                    }}
+                  />
+                  {fieldErrors[key] && (
+                    <span className="field-error" id={"request-error-" + key}>
+                      {fieldErrors[key]}
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ))}
+        <fieldset className="form-section">
+          <legend>Kebutuhan medis</legend>
+          <label>
+            <span>
+              Ringkasan kebutuhan <span aria-hidden="true">*</span>
+            </span>
+            <textarea
+              id="request-summary"
+              name="summary"
+              aria-label="Ringkasan kebutuhan"
+              aria-invalid={!!fieldErrors.summary}
+              aria-describedby={
+                fieldErrors.summary ? "request-error-summary" : undefined
+              }
+              required
+              value={form.summary}
+              maxLength={2000}
+              onChange={(e) => {
+                setForm({ ...form, summary: e.target.value });
+                setFieldErrors((errors) => ({ ...errors, summary: "" }));
+              }}
+            />
+            {fieldErrors.summary && (
+              <span className="field-error" id="request-error-summary">
+                {fieldErrors.summary}
+              </span>
+            )}
+          </label>
+        </fieldset>
+        <fieldset className="form-section">
+          <legend>Penanda lokasi simulasi</legend>
+          <p className="form-help">
+            Pilih titik atau isi koordinat manual. Lokasi perangkat memerlukan
+            izin Anda.
+          </p>
+          <LocationMap
+            onPick={pick}
+            selected={
+              form.lat !== "" && form.lng !== ""
+                ? [Number(form.lat), Number(form.lng)]
+                : undefined
             }
-            navigator.geolocation.getCurrentPosition(
-              (p) => pick(p.coords.latitude, p.coords.longitude),
-              () =>
+          />
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              if (!navigator.geolocation) {
                 setNotice(
-                  "Izin lokasi ditolak atau lokasi tidak tersedia. Isi koordinat manual.",
-                ),
-            );
-          }}
-        >
-          Gunakan Lokasi Saya
-        </button>
+                  "Lokasi perangkat tidak didukung; isi koordinat manual.",
+                );
+                return;
+              }
+              navigator.geolocation.getCurrentPosition(
+                (p) => pick(p.coords.latitude, p.coords.longitude),
+                () =>
+                  setNotice(
+                    "Izin lokasi ditolak atau lokasi tidak tersedia. Isi koordinat manual.",
+                  ),
+              );
+            }}
+          >
+            Gunakan Lokasi Saya
+          </button>
+        </fieldset>
         <div className="actions">
           <button disabled={busy || submitted} type="submit">
             {busy ? "Mengirim…" : "Kirim permohonan simulasi"}
@@ -385,7 +485,22 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
           </button>
         </div>
       </form>
-      <p role="status">{notice}</p>
+      <p
+        role="status"
+        className={
+          notice
+            ? "form-feedback " +
+              (/^(Tercatat|Tersimpan lokal)/.test(notice)
+                ? "feedback-success"
+                : Object.values(fieldErrors).some(Boolean) ||
+                    /Error:|[A-Z_]{3,}:/.test(notice)
+                  ? "feedback-error"
+                  : "feedback-attention")
+            : undefined
+        }
+      >
+        {notice}
+      </p>
       {submitted && (
         <div className="notice">
           <p>
