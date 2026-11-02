@@ -1,5 +1,6 @@
 import { mode } from "../services/api";
 import { actionLabel, listDate, recordSourceLabel } from "../lib/presentation";
+import { Check, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import type { RecordData } from "../types";
 import { EmptyState, StatusBadge } from "./MobileUI";
@@ -66,11 +67,13 @@ export default function RecordTable({
                     )}
                   </strong>
                   <StatusBadge status={r.status} />
+                  {r.id === selectedId && (
+                    <span className="record-selected">
+                      <Check size={14} aria-hidden="true" />
+                      Dipilih
+                    </span>
+                  )}
                 </div>
-                <small className="record-reference">
-                  {r.requestId && r.team ? "Misi" : "Referensi"}{" "}
-                  {r.id.slice(0, 8)}
-                </small>
                 {!!(r.facility || request?.facility) && (
                   <p className="record-route">
                     Asal · {String(r.facility ?? request?.facility)}
@@ -90,13 +93,18 @@ export default function RecordTable({
                 {r.location !== undefined && (
                   <p>Lokasi: {String(r.location)}</p>
                 )}
+                <small className="record-reference">
+                  {r.requestId && r.team ? "Misi" : "Referensi"}{" "}
+                  {r.id.slice(0, 8)}
+                </small>
                 {onOpen && (
                   <button
                     className="secondary"
                     aria-expanded={r.id === selectedId}
                     onClick={() => onOpen(r)}
                   >
-                    Lihat detail {r.id.slice(0, 8)}
+                    Lihat detail {r.id.slice(0, 8)}{" "}
+                    <ArrowRight size={16} aria-hidden="true" />
                   </button>
                 )}
               </article>

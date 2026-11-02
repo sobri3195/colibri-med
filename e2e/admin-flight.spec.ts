@@ -109,10 +109,8 @@ test("operator cannot use the admin dashboard but can monitor via mobile without
   await page.route("**/tile.openstreetmap.org/**", (r) => r.abort());
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/admin\/login$/);
-  await page
-    .getByRole("combobox", { name: "Peran demo" })
-    .selectOption("Operator");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page.getByRole("radio", { name: "Operator", exact: false }).check();
+  await page.getByRole("button", { name: /^Masuk sebagai/ }).click();
   await expect(
     page.getByRole("heading", { name: "Dashboard khusus Administrator" }),
   ).toBeVisible();

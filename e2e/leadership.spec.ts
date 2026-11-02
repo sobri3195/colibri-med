@@ -5,10 +5,10 @@ async function login(page: Page) {
   await expect(
     page.getByRole("heading", { name: "Pengawasan pimpinan", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Peran demo" })).toHaveValue(
-    "Viewer pimpinan",
-  );
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await expect(
+    page.getByRole("radio", { name: /^Viewer pimpinan/ }),
+  ).toBeChecked();
+  await page.getByRole("button", { name: /^Masuk sebagai/ }).click();
   await expect(
     page.getByRole("combobox", { name: "Sudut pantau" }),
   ).toBeVisible();
@@ -112,10 +112,8 @@ test("operator cannot open leadership data and viewer is redirected from raw int
   page,
 }) => {
   await page.goto("/pimpinan");
-  await page
-    .getByRole("combobox", { name: "Peran demo" })
-    .selectOption("Operator");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page.getByRole("radio", { name: "Operator", exact: false }).check();
+  await page.getByRole("button", { name: /^Masuk sebagai/ }).click();
   await expect(
     page.getByRole("heading", { name: "Akses pengawasan terbatas" }),
   ).toBeVisible();
@@ -125,7 +123,7 @@ test("operator cannot open leadership data and viewer is redirected from raw int
   await page
     .getByRole("button", { name: "Keluar untuk berganti akun" })
     .click();
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page.getByRole("button", { name: /^Masuk sebagai/ }).click();
   await expect(
     page.getByRole("combobox", { name: "Sudut pantau" }),
   ).toBeVisible();
@@ -163,7 +161,7 @@ test("leadership polling pauses when hidden and expiry stays in the leadership s
   await page.clock.fastForward(3600001);
   await expect(page).toHaveURL(/\/pimpinan$/);
   await expect(
-    page.getByRole("heading", { name: "Login petugas" }),
+    page.getByRole("heading", { name: "Masuk ke ruang koordinasi" }),
   ).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Navigasi pengawasan" }),

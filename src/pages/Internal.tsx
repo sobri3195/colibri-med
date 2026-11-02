@@ -1,3 +1,17 @@
+import { PageHeading, FilterBar, Field } from "../components/DesignSystem";
+import BrandMark from "../components/BrandMark";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Plane,
+  HeartPulse,
+  MapPin,
+  Boxes,
+  FileText,
+  Inbox,
+  Settings,
+  UserRound,
+} from "lucide-react";
 import { operationalReportRows } from "../lib/reports";
 import { canAction } from "../lib/permissions";
 import WorkflowSummary from "../components/WorkflowSummary";
@@ -37,7 +51,7 @@ import LocationMap from "../components/LocationMap";
 import { usePreferences } from "../features/usePreferences";
 import CatalogueManager from "../features/CatalogueManager";
 const tabs = [
-  ["", "Vue d’ensemble"],
+  ["", "Ringkasan"],
   ["permohonan", "Permohonan"],
   ["misi", "Papan misi"],
   ["penilaian", "Penilaian & catatan"],
@@ -166,7 +180,7 @@ export default function Internal({
       items={items}
       query={search}
       status={filter}
-      compact={compact}
+      compact={compact || section === "permohonan" || section === "misi"}
       requests={requests}
       selectedId={
         compact && !selected
@@ -185,19 +199,42 @@ export default function Internal({
     >
       {!compact && (
         <aside>
+          <Link className="sidebar-brand" to="/">
+            <BrandMark />
+            <span>
+              COLIBRI MED<small>Air Medical</small>
+            </span>
+          </Link>
           <div className="eyebrow">RUANG KOORDINASI</div>
-          <strong>{actor.role}</strong>
           <nav>
-            {tabs.map(([path, label]) => (
-              <Link
-                key={path}
-                className={section === path ? "active" : ""}
-                to={"/internal/" + path}
-              >
-                {label === "Vue d’ensemble" ? "Ringkasan" : label}
-              </Link>
-            ))}
+            {tabs.map(([path, label], index) => {
+              const Icon = [
+                LayoutDashboard,
+                ClipboardList,
+                Plane,
+                HeartPulse,
+                MapPin,
+                Boxes,
+                FileText,
+                Inbox,
+                Settings,
+              ][index];
+              return (
+                <Link
+                  key={path}
+                  className={section === path ? "active" : ""}
+                  to={"/internal/" + path}
+                >
+                  <Icon size={18} aria-hidden="true" />
+                  {label}
+                </Link>
+              );
+            })}
           </nav>
+          <div className="sidebar-role">
+            <UserRound size={18} aria-hidden="true" />
+            <span>{actor.role}</span>
+          </div>
           <small>
             Semua data sintetis.
             <br />
@@ -206,30 +243,30 @@ export default function Internal({
         </aside>
       )}
       <div className="workspace-content">
-        <div className="page-heading">
-          <div>
-            <div className="eyebrow">COLIBRI MED / OPERASI SIMULASI</div>
-            <h1>
-              {tabs
-                .find((t) => t[0] === section)?.[1]
-                .replace("Vue d’ensemble", "Ringkasan koordinasi") ??
-                "Ringkasan"}
-            </h1>
-            <small>
-              {poll.updated
-                ? "Pembaruan: " + date(poll.updated)
-                : "Belum diperbarui"}{" "}
-              · polling {interval / 1000} detik
-            </small>
-          </div>
-          <button
-            className="secondary"
-            disabled={poll.loading}
-            onClick={() => void poll.refresh()}
-          >
-            <RefreshCw size={16} /> Refresh
-          </button>
-        </div>
+        <PageHeading
+          eyebrow="COLIBRI AIR MEDICAL / KOORDINASI"
+          title={
+            section
+              ? (tabs.find((t) => t[0] === section)?.[1] ?? "Ringkasan")
+              : "Ringkasan koordinasi"
+          }
+          action={
+            <button
+              className="secondary"
+              disabled={poll.loading}
+              onClick={() => void poll.refresh()}
+            >
+              <RefreshCw size={16} /> Refresh
+            </button>
+          }
+        >
+          <small>
+            {poll.updated
+              ? "Pembaruan: " + date(poll.updated)
+              : "Belum diperbarui"}{" "}
+            · polling {interval / 1000} detik
+          </small>
+        </PageHeading>
         <AsyncState {...poll} reload={() => void poll.refresh()} />
         {busy && (
           <p role="status">
@@ -272,18 +309,16 @@ export default function Internal({
         {["permohonan", "misi", "fasilitas", "sumber-daya"].includes(
           section,
         ) && (
-          <div className="toolbar">
-            <label className="search-field">
-              Cari data
+          <FilterBar>
+            <Field label="Cari data">
               <input
                 aria-label="Cari data"
                 placeholder="Cari data tersimpan…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </label>
-            <label className="search-field">
-              Filter status
+            </Field>
+            <Field label="Filter status">
               <select
                 aria-label="Filter status"
                 value={filter}
@@ -309,7 +344,7 @@ export default function Internal({
                     </option>
                   ))}
               </select>
-            </label>
+            </Field>
             <button
               className="secondary reset-filter"
               disabled={!search && !filter}
@@ -320,10 +355,10 @@ export default function Internal({
             >
               Reset filter
             </button>
-          </div>
+          </FilterBar>
         )}
         {section === "permohonan" && (
-          <section className="card">
+          <section className="card request-list-panel">
             <h2>Daftar permohonan</h2>
             {compact && (
               <Link className="button" to="/mobile/permohonan">

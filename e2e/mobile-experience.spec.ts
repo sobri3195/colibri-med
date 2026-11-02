@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 const screens = [
-  ["/mobile", "Ruang kerja koordinasi", "Beranda"],
+  ["/mobile", "Koordinasi medis udara", "Beranda"],
   ["/mobile/permohonan", "Mulai koordinasi", "Permohonan"],
   ["/mobile/operasi/permohonan", "Permohonan", "Permohonan"],
   ["/mobile/misi", "Papan misi", "Misi"],
