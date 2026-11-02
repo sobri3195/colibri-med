@@ -160,6 +160,7 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
                 : path === "/mobile/akun"
                   ? pathname === path ||
                     pathname === "/mobile/login" ||
+                    pathname === "/mobile/skenario" ||
                     (pathname.startsWith("/mobile/operasi") &&
                       pathname !== "/mobile/operasi/permohonan")
                   : pathname === path || pathname.startsWith(path + "/");
@@ -252,6 +253,12 @@ export function MobileHome({ actor }: { actor: Actor | null }) {
         ) : (
           <MobileOverview actor={actor} />
         ))}
+      {mode === "demo" && (
+        <Link className="scenario-entry" to="/mobile/skenario">
+          Skenario demo · panduan latihan terpadu{" "}
+          <ArrowRight size={18} aria-hidden="true" />
+        </Link>
+      )}
       <section className="mobile-section">
         <div className="mobile-section-heading">
           <h2>Akses cepat</h2>
@@ -395,6 +402,11 @@ export function MobileAccount({
         <div className="mobile-section-heading">
           <h2>Ruang kerja & preferensi</h2>
         </div>
+      )}
+      {mode === "demo" && (
+        <Link className="scenario-entry" to="/mobile/skenario">
+          Skenario demo <ArrowRight size={18} aria-hidden="true" />
+        </Link>
       )}
       {actor && (
         <section className="mobile-menu" aria-label="Modul petugas">

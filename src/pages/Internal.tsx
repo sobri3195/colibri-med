@@ -1,6 +1,9 @@
+import { operationalReportRows } from "../lib/reports";
+import { canAction } from "../lib/permissions";
+import WorkflowSummary from "../components/WorkflowSummary";
 import { tableLabel, actionLabel, displayStatus } from "../lib/presentation";
 import { EmptyState } from "../components/MobileUI";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import {
   Link,
   useParams,
@@ -93,9 +96,11 @@ export default function Internal({
     ? requests.find((r) => r.id === selected)
     : requests[0];
   const mission = missions.find((r) => r.requestId === request?.id);
-  const allowed = (...r: string[]) =>
-    actor.role === "Administrator" || r.includes(actor.role);
+  const actLock = useRef(false);
   const act = async (action: string, payload: Record<string, unknown>) => {
+    if (actLock.current) return null;
+    actLock.current = true;
+    setMessage("");
     setBusy(true);
     try {
       const r = await submit(actor, action, payload);
@@ -104,7 +109,7 @@ export default function Internal({
           ? "Menunggu sinkronisasi"
           : mode === "demo"
             ? "Tersimpan di perangkat"
-            : "Perubahan dicatat.",
+            : "Tersinkron ke server",
       );
       await poll.refresh();
       return r;
@@ -112,13 +117,15 @@ export default function Internal({
       setMessage(String(e));
       return null;
     } finally {
-      setBusy(false);
       try {
         setPending(await outbox(outboxOwner(actor)));
       } catch {
         setMessage(
           "Outbox lokal belum dapat dibaca. Periksa penyimpanan perangkat.",
         );
+      } finally {
+        actLock.current = false;
+        setBusy(false);
       }
     }
   };
@@ -224,12 +231,17 @@ export default function Internal({
           </button>
         </div>
         <AsyncState {...poll} reload={() => void poll.refresh()} />
+        {busy && (
+          <p role="status">
+            Menyimpan perubahan… Tunggu konfirmasi sebelum menutup halaman.
+          </p>
+        )}
         {message && (
           <div
             role="status"
             className={
               "notice " +
-              (message === "Perubahan dicatat." ||
+              (message === "Tersinkron ke server" ||
               message === "Tersimpan di perangkat"
                 ? "feedback-success"
                 : /Error:|[A-Z_]{3,}:/.test(message)
@@ -470,6 +482,13 @@ export default function Internal({
               )}
               {request && (
                 <>
+                  <WorkflowSummary
+                    request={request}
+                    mission={mission}
+                    tables={data}
+                    actor={actor}
+                    pending={pending}
+                  />
                   <p>
                     {String(request.summary)} ·{" "}
                     <StatusBadge status={request.status} />
@@ -478,7 +497,7 @@ export default function Internal({
                     Lokasi: {String(request.location)} · Akses:{" "}
                     {String(request.access)}
                   </p>
-                  {allowed("Operator") && (
+                  {canAction(actor, "requests.transition") && (
                     <details>
                       <summary>Perbarui ringkasan permohonan</summary>
                       <form
@@ -508,7 +527,7 @@ export default function Internal({
                       </form>
                     </details>
                   )}
-                  {allowed("Operator") && (
+                  {canAction(actor, "requests.transition") && (
                     <div className="actions">
                       {requestStages.indexOf(request.status) <
                         requestStages.length - 1 && (
@@ -541,6 +560,12 @@ export default function Internal({
                             void act("missions.assign", {
                               requestId: request.id,
                               team: f.get("team"),
+                              resourceIds: f.get("resourceId")
+                                ? [f.get("resourceId")]
+                                : [],
+                              aircraftId: f.get("aircraftId") || undefined,
+                              receivingFacilityId:
+                                f.get("receivingFacilityId") || undefined,
                             });
                           }}
                         >
@@ -548,6 +573,48 @@ export default function Internal({
                             Tim simulasi
                             <input name="team" required maxLength={150} />
                           </label>
+                          <label htmlFor="mission-resource">
+                            Sumber daya ditinjau (opsional)
+                          </label>
+                          <select id="mission-resource" name="resourceId">
+                            <option value="">Tanpa referensi direktori</option>
+                            {(data.Resources ?? []).map((r) => (
+                              <option key={r.id} value={r.id}>
+                                {String(r.name)} · {r.status}
+                              </option>
+                            ))}
+                          </select>
+
+                          <label htmlFor="mission-aircraft">
+                            Helikopter sintetis (opsional)
+                          </label>
+                          <select id="mission-aircraft" name="aircraftId">
+                            <option value="">Belum dipilih</option>
+                            {(data.Aircraft ?? []).map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {String(a.demoCode)} · {String(a.name)}
+                              </option>
+                            ))}
+                          </select>
+
+                          <label htmlFor="mission-receiver">
+                            Fasilitas penerima (opsional)
+                          </label>
+                          <select
+                            id="mission-receiver"
+                            name="receivingFacilityId"
+                            defaultValue={String(
+                              request.receivingFacilityId ?? "",
+                            )}
+                          >
+                            <option value="">Belum dipilih</option>
+                            {(data.Facilities ?? []).map((f) => (
+                              <option key={f.id} value={f.id}>
+                                {String(f.name)}
+                              </option>
+                            ))}
+                          </select>
+
                           <button disabled={busy}>
                             Buat misi & tetapkan tim
                           </button>
@@ -610,8 +677,9 @@ export default function Internal({
                           progres.
                         </small>
                       </details>
-                      {allowed("Operator") && (
+                      {canAction(actor, "missions.transition") && (
                         <MissionControls
+                          tables={data}
                           mission={mission}
                           busy={busy}
                           act={act}
@@ -635,13 +703,10 @@ export default function Internal({
                     ["handovers", "Serah terima", "Rumah sakit penerima"],
                   ].map(
                     ([group, title, role]) =>
-                      allowed(
-                        role,
-                        ...(group === "handovers"
-                          ? ["Dokter/perawat"]
-                          : group === "checklists"
-                            ? ["Koordinator penerbangan"]
-                            : []),
+                      canAction(
+                        actor,
+                        group +
+                          (group === "patientNotes" ? ".create" : ".save"),
                       ) && (
                         <OperationalForm
                           key={group + ":" + request.id}
@@ -762,7 +827,7 @@ export default function Internal({
                 act={act}
               />
             )}
-            {allowed("Operator") &&
+            {canAction(actor, "resources.update") &&
               (data.Resources ?? []).map((r) => (
                 <form
                   key={r.id + ":" + r.revision}
@@ -798,26 +863,20 @@ export default function Internal({
           <section className="card">
             <h2>Laporan simulasi</h2>
             <p>
-              Ringkasan alur, perubahan status, penundaan, checklist, serah
-              terima, dan sumber daya. Waktu penyimpanan ISO UTC; tampilan WIB.
+              Ekspor memuat seluruh data yang diizinkan peran ini, bukan filter
+              pada daftar modul lain. Semua data sintetis. Kolom waktu memakai
+              WIB; rincian JSON menyimpan waktu ISO UTC. Jumlah pasien berasal
+              dari permohonan; jumlah catatan serah terima bukan jumlah pasien
+              yang telah diterima.
             </p>
             <div className="actions">
               <button
+                disabled={poll.loading || !!poll.error}
                 onClick={() =>
                   download(
                     "csv",
                     csv(
-                      Object.entries(data).flatMap(([table, records]) =>
-                        records.map((r) => ({
-                          table: tableLabel(table),
-                          id: r.id,
-                          status: displayStatus(r.status, mode === "demo"),
-                          createdAt: r.createdAt,
-                          updatedAt: r.updatedAt,
-                          reason: r.reason ?? "",
-                          details: JSON.stringify(r),
-                        })),
-                      ),
+                      operationalReportRows(data, mode === "demo", actor.role),
                     ),
                     "text/csv;charset=utf-8",
                   )
@@ -826,6 +885,7 @@ export default function Internal({
                 <Download size={16} /> Ekspor CSV
               </button>
               <button
+                disabled={poll.loading || !!poll.error}
                 className="secondary"
                 onClick={async () => {
                   const { jsPDF } = await import("jspdf");
@@ -834,6 +894,13 @@ export default function Internal({
                   pdf.setFontSize(10);
                   for (const line of [
                     "COLIBRI MED — PROTOTIPE SIMULASI — DATA SINTETIS",
+                    "Cakupan: seluruh data yang diizinkan peran; bukan filter modul lain.",
+                    "Peran: " + actor.role,
+                    "Sumber: " +
+                      (mode === "demo"
+                        ? "Tersimpan di perangkat"
+                        : "Tersinkron ke server") +
+                      ". Waktu tampilan WIB.",
                     ...Object.entries(data).flatMap(([table, records]) => [
                       tableLabel(table) + " (" + records.length + ")",
                       ...records.map(

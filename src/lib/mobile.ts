@@ -27,6 +27,7 @@ export function mobileDestination(value: unknown) {
     "/mobile/misi",
     "/mobile/peta",
     "/mobile/permohonan",
+    "/mobile/skenario",
   ].includes(path) ||
     mobileSections.some((s) => path === "/mobile/operasi" + (s ? "/" + s : ""))
     ? path + requestSearch(url.search)

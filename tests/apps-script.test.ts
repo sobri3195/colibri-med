@@ -120,6 +120,86 @@ function runtime() {
   };
 }
 describe("actual Apps Script dispatcher against in-memory Sheets", () => {
+  it("checks linked resource readiness and Viewer permissions in the real dispatcher", () => {
+    const r = runtime();
+    const token = "1".repeat(64);
+    const viewToken = "2".repeat(64);
+    const request = randomUUID();
+    r.run(
+      `write_('Users',[base_({id:'operator-linked',role:'Operator',name:'Simulasi'}),base_({id:'viewer-linked',role:'Viewer pimpinan',name:'Simulasi'})]);write_('Sessions',[base_({userId:'operator-linked',tokenHash:digest_('${token}'),expiresAt:new Date(Date.now()+600000).toISOString()}),base_({userId:'viewer-linked',tokenHash:digest_('${viewToken}'),expiresAt:new Date(Date.now()+600000).toISOString()})]);write_('Requests',[base_({id:'${request}',status:'Dalam Koordinasi'})]);`,
+    );
+    const resource = r.run("read_('Resources')[0]");
+    const aircraft = r.run("read_('Aircraft')[0]");
+    const payload = {
+      id: randomUUID(),
+      operationId: randomUUID(),
+      requestId: request,
+      team: "Tim latihan terhubung",
+      resourceIds: [resource.id],
+      aircraftId: aircraft.id,
+    };
+    expect(
+      r.post("missions.assign", payload, { sessionToken: token }).error.code,
+    ).toBe("WORKFLOW");
+    expect(
+      r.post(
+        "resources.update",
+        {
+          id: resource.id,
+          operationId: randomUUID(),
+          baseRevision: resource.revision,
+          data: { status: "Siap simulasi" },
+        },
+        { sessionToken: token },
+      ).ok,
+    ).toBe(true);
+    const first = r.post("missions.assign", payload, { sessionToken: token });
+    expect(first.ok).toBe(true);
+    expect(first.data.resourceIds).toEqual([resource.id]);
+    expect(first.data.aircraftId).toBe(aircraft.id);
+    expect(
+      r.post("missions.assign", payload, { sessionToken: token }).data.id,
+    ).toBe(first.data.id);
+    expect(
+      r.run(
+        "read_('MissionAssignments').filter(function(a){return a.missionId==='" +
+          payload.id +
+          "';}).length",
+      ),
+    ).toBe(1);
+    expect(
+      r.post(
+        "missions.transition",
+        {
+          id: first.data.id,
+          operationId: randomUUID(),
+          baseRevision: first.data.revision,
+          status: "Tim Ditugaskan",
+        },
+        { sessionToken: token },
+      ).ok,
+    ).toBe(true);
+    expect(
+      r.post(
+        "missions.transition",
+        {
+          id: first.data.id,
+          operationId: randomUUID(),
+          baseRevision: 2,
+          status: "Berangkat",
+        },
+        { sessionToken: token },
+      ).error.code,
+    ).toBe("WORKFLOW");
+    expect(
+      r.post(
+        "missions.assign",
+        { ...payload, id: randomUUID(), operationId: randomUUID() },
+        { sessionToken: viewToken },
+      ).error.code,
+    ).toBe("FORBIDDEN");
+  });
+
   it("dispatches helicopter reports with locked journal replay and seeds aircraft reports idempotently", () => {
     const r = runtime();
     const token = "f".repeat(64);

@@ -38,6 +38,7 @@ Browser test memakai Chromium sistem bila tersedia atau browser terpasang Playwr
 - [Matriks hak akses dan API](docs/ACCESS-AND-API.md): sesi, role, skema, concurrency, idempotency, penanganan partial failure.
 - [Batas prototipe dan fase APK](docs/LIMITATIONS.md).
 - [Ringkasan pengujian](docs/TESTING.md).
+- [Skenario demo terpadu](docs/DEMO-SCENARIOS.md): tiga paket, panduan lintas peran, reset terbatas dan screenshot.
 - [Spesifikasi pengguna](docs/SPECIFICATION.md).
 
 Salin `.env.example` hanya sebagai template tanpa nilai rahasia. Rahasia koneksi harus berada di environment server Vercel dan Script Properties; **tidak boleh memakai prefix `VITE_`**. Vite saja menjalankan demo, bukan Vercel Functions. Connected tidak fallback otomatis ke demo saat backend gagal.

@@ -73,6 +73,12 @@ test("mobile completes a newly submitted request through team changes, reviews, 
   await page.getByRole("button", { name: "Simpan draft", exact: true }).click();
   await page.getByLabel("Ringkasan kebutuhan").fill("");
   await page.getByRole("button", { name: "Muat draft", exact: true }).click();
+  await expect(
+    page.getByRole("group", { name: "Konfirmasi muat draft" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Ganti isian dengan draft", exact: true })
+    .click();
   await expect(page.getByLabel("Ringkasan kebutuhan")).toHaveValue(
     "Kebutuhan simulasi dari perangkat mobile",
   );
@@ -145,7 +151,7 @@ test("mobile completes a newly submitted request through team changes, reviews, 
     await checkbox.check();
   await checklist.getByRole("button", { name: "Catat checklist" }).click();
   await expect(
-    checklist.getByText(/Versi server yang ditinjau: revision 1/),
+    checklist.getByText(/Versi tersimpan yang ditinjau: revision 1/),
   ).toBeVisible();
   await page.reload();
   await checklist.locator("summary").click();

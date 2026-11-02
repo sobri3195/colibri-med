@@ -97,3 +97,13 @@ Operasi memvalidasi relasi misi, peran, flag sintetis dan revision sebelum mempe
 Setup menambahkan dua sheet dengan header generik yang sama. Seed membuat dua unit SIM-HELI sintetis dan laporan awal, tanpa menambah duplikat saat dijalankan ulang. Data demo lama hanya ditambah ketika tabel Aircraft belum ada; Requests/Missions/draft pengguna tidak dihapus. Jika tabel sudah ada tetapi kosong, tidak diisi ulang otomatis oleh aplikasi. Schema baru perlu disiapkan sebelum merilis gateway/frontend baru.
 
 Animasi lokal memakai trainingPath sintetis sebagai ilustrasi, berhenti saat tab tersembunyi dan saat berpindah ke tab laporan, tidak menulis API/data posisi, serta bukan rute penerbangan/ETA. Tile gagal tetap menyisakan daftar koordinat, kontrol dan laporan. Tidak ada listener GPS, ADS-B, WebSocket, integrasi perangkat atau autentikasi awak pesawat nyata.
+
+## Skenario demo terpadu dan referensi penugasan
+
+`/mobile/skenario` hanya memuat/reset paket melalui IndexedDB dalam mode demo untuk Operator/Administrator. Tidak ada endpoint server untuk fixture. [Panduan dan batas reset](DEMO-SCENARIOS.md) menjelaskan namespace, transaksi atomik, draft dan relasi yang dilindungi.
+
+`missions.assign` tetap menerima kontrak lama, dengan tambahan opsional `resourceIds: UUID[]`, `aircraftId: UUID`, `receivingFacilityId: UUID`. Resource harus ada dan Siap simulasi; helikopter harus bertanda sintetis; fasilitas penerima harus ada. Referensi disimpan pada misi dan assignment. `missions.reassign` mempertahankan referensi yang sudah dipilih. Saat Berangkat, sumber daya tertaut diperiksa kembali, bersama keputusan penerbangan terbaru Disetujui. Enum proses tersimpan tidak berubah.
+
+Kemampuan UI/domain memakai `src/lib/permissions.ts`; Services.gs memanggil helper Domain.canReadTable untuk pembatasan catatan klinis. Backend tetap memeriksa sesi/role/relasi/revision/journal pada dispatch, bukan mengandalkan UI. Bundle Domain.gs telah diregenerasi; belum ada deployment pada tugas ini.
+
+Klien memerlukan acknowledgment mutasi berupa ID objek yang cocok dan revision bilangan bulat positif sebelum menghapus outbox. Respons sukses yang tidak lengkap menghasilkan UPSTREAM dan mempertahankan operasi untuk retry identitas sama. Label sumber penyimpanan dipisahkan dari status proses: enum `Tercatat di Server` ditampilkan sebagai Permohonan baru, dengan label sumber sesuai mode.

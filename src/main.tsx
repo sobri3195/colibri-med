@@ -1,3 +1,4 @@
+import DemoScenarios from "./pages/DemoScenarios";
 import React, { useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -249,6 +250,7 @@ function App() {
             />
             <Route path="login" element={<MobileLogin onLogin={onLogin} />} />
             <Route path="tentang" element={<Info />} />
+            <Route path="skenario" element={<DemoScenarios actor={actor} />} />
             <Route
               path="*"
               element={

@@ -1,3 +1,9 @@
+import { ApiError } from "../lib/errors";
+const storageError = () =>
+  new ApiError(
+    "STORAGE",
+    "Penyimpanan perangkat gagal. Periksa ruang dan izin penyimpanan browser, lalu coba lagi. Jangan menghapus data sebelum mencadangkannya.",
+  );
 import { openDB } from "idb";
 import type { Operation } from "../types";
 const notifyOutbox = () => {
@@ -25,29 +31,41 @@ const db = () =>
     },
   }));
 export async function getLocal(store: "drafts" | "demo", key: string) {
-  return (await db()).get(store, key);
+  try {
+    return await (await db()).get(store, key);
+  } catch {
+    throw storageError();
+  }
 }
 export async function putLocal(
   store: "drafts" | "demo",
   key: string,
   value: unknown,
 ) {
-  return (await db()).put(store, value, key);
+  try {
+    return await (await db()).put(store, value, key);
+  } catch {
+    throw storageError();
+  }
 }
 export async function queue(owner: string, op: Operation) {
-  const tx = (await db()).transaction(["outbox", "meta"], "readwrite");
-  const store = tx.objectStore("outbox");
-  const key = owner + ":" + op.operationId;
-  const previous = await store.get(key);
-  let sequence = previous?.sequence;
-  if (sequence === undefined) {
-    sequence =
-      Number((await tx.objectStore("meta").get("outboxSequence")) ?? 0) + 1;
-    await tx.objectStore("meta").put(sequence, "outboxSequence");
+  try {
+    const tx = (await db()).transaction(["outbox", "meta"], "readwrite");
+    const store = tx.objectStore("outbox");
+    const key = owner + ":" + op.operationId;
+    const previous = await store.get(key);
+    let sequence = previous?.sequence;
+    if (sequence === undefined) {
+      sequence =
+        Number((await tx.objectStore("meta").get("outboxSequence")) ?? 0) + 1;
+      await tx.objectStore("meta").put(sequence, "outboxSequence");
+    }
+    await store.put({ ...op, owner, sequence }, key);
+    await tx.done;
+    notifyOutbox();
+  } catch {
+    throw storageError();
   }
-  await store.put({ ...op, owner, sequence }, key);
-  await tx.done;
-  notifyOutbox();
 }
 export async function outbox(owner: string): Promise<Operation[]> {
   return (await (await db()).getAll("outbox"))
@@ -114,4 +132,45 @@ export async function receipts(owner: string) {
   return (await (await db()).getAll("receipts"))
     .filter((r) => r.owner === owner)
     .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+}
+
+/** A single IndexedDB transaction serializes mutations across tabs, even without Web Locks. */
+export async function editDemo<T>(
+  edit: (state: unknown, pending: Operation[]) => { state: unknown; result: T },
+): Promise<T> {
+  try {
+    const tx = (await db()).transaction(["demo", "outbox"], "readwrite");
+    try {
+      const state = await tx.objectStore("demo").get("state");
+      const pending = await tx.objectStore("outbox").getAll();
+      const next = edit(state, pending);
+      await tx.objectStore("demo").put(next.state, "state");
+      await tx.done;
+      return next.result;
+    } catch (error) {
+      try {
+        tx.abort();
+      } catch {}
+      await tx.done.catch(() => {});
+      throw error;
+    }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /^(WORKFLOW|FORBIDDEN|CONFLICT|VALIDATION|NOT_FOUND|OPERATION_REUSE|ACTION|UNAUTHORIZED):/.test(
+        error.message,
+      )
+    )
+      throw error;
+    throw storageError();
+  }
+}
+export function notifyDataChanged() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("colibri-data-changed"));
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel("colibri-data");
+    channel.postMessage("changed");
+    channel.close();
+  }
 }

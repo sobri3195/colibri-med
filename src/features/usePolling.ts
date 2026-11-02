@@ -50,11 +50,19 @@ export function usePolling(load: () => Promise<void>, interval = 30000) {
     };
     document.addEventListener("visibilitychange", visible);
     window.addEventListener("online", visible);
+    window.addEventListener("colibri-data-changed", visible);
+    const channel =
+      typeof BroadcastChannel !== "undefined"
+        ? new BroadcastChannel("colibri-data")
+        : null;
+    if (channel) channel.onmessage = visible;
     return () => {
       stopped = true;
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", visible);
       window.removeEventListener("online", visible);
+      window.removeEventListener("colibri-data-changed", visible);
+      channel?.close();
     };
   }, [refresh, interval]);
   return { error, loading, updated, refresh };

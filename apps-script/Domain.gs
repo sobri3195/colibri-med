@@ -27,6 +27,8 @@ var Domain = (() => {
   var entry_exports = {};
   __export(entry_exports, {
     bytesToHex: () => bytesToHex,
+    canAction: () => canAction,
+    canReadTable: () => canReadTable,
     execute: () => execute,
     hexToBytes: () => hexToBytes,
     operationFingerprint: () => operationFingerprint,
@@ -34,210 +36,6 @@ var Domain = (() => {
     seed: () => seed,
     sha256: () => sha256
   });
-
-  // node_modules/idb/build/index.js
-  var instanceOfAny = (object2, constructors) => constructors.some((c) => object2 instanceof c);
-  var idbProxyableTypes;
-  var cursorAdvanceMethods;
-  function getIdbProxyableTypes() {
-    return idbProxyableTypes || (idbProxyableTypes = [
-      IDBIndex,
-      IDBObjectStore,
-      IDBCursor,
-      IDBDatabase,
-      IDBTransaction
-    ]);
-  }
-  function getCursorAdvanceMethods() {
-    return cursorAdvanceMethods || (cursorAdvanceMethods = ["advance", "continue", "continuePrimaryKey"].map((method) => IDBCursor.prototype[method]));
-  }
-  var transactionDoneMap = /* @__PURE__ */ new WeakMap();
-  var transformCache = /* @__PURE__ */ new WeakMap();
-  var reverseTransformCache = /* @__PURE__ */ new WeakMap();
-  function promisifyRequest(request) {
-    const promise2 = new Promise((resolve, reject) => {
-      const unlisten = () => {
-        request.removeEventListener("success", success2);
-        request.removeEventListener("error", error62);
-      };
-      const success2 = () => {
-        resolve(wrap(request.result));
-        unlisten();
-      };
-      const error62 = () => {
-        reject(request.error);
-        unlisten();
-      };
-      request.addEventListener("success", success2);
-      request.addEventListener("error", error62);
-    });
-    reverseTransformCache.set(promise2, request);
-    return promise2;
-  }
-  function cacheDonePromiseForTransaction(tx) {
-    if (transactionDoneMap.has(tx))
-      return;
-    const done = new Promise((resolve, reject) => {
-      const unlisten = () => {
-        tx.removeEventListener("complete", complete);
-        tx.removeEventListener("error", error62);
-        tx.removeEventListener("abort", error62);
-      };
-      const complete = () => {
-        resolve();
-        unlisten();
-      };
-      const error62 = () => {
-        reject(tx.error || new DOMException("AbortError", "AbortError"));
-        unlisten();
-      };
-      tx.addEventListener("complete", complete);
-      tx.addEventListener("error", error62);
-      tx.addEventListener("abort", error62);
-    });
-    transactionDoneMap.set(tx, done);
-  }
-  var idbProxyTraps = {
-    get(target, prop, receiver) {
-      if (target instanceof IDBTransaction) {
-        if (prop === "done")
-          return transactionDoneMap.get(target);
-        if (prop === "store") {
-          return receiver.objectStoreNames[1] ? void 0 : receiver.objectStore(receiver.objectStoreNames[0]);
-        }
-      }
-      return wrap(target[prop]);
-    },
-    set(target, prop, value) {
-      target[prop] = value;
-      return true;
-    },
-    has(target, prop) {
-      if (target instanceof IDBTransaction && (prop === "done" || prop === "store")) {
-        return true;
-      }
-      return prop in target;
-    }
-  };
-  function replaceTraps(callback) {
-    idbProxyTraps = callback(idbProxyTraps);
-  }
-  function wrapFunction(func) {
-    if (getCursorAdvanceMethods().includes(func)) {
-      return function(...args) {
-        func.apply(unwrap(this), args);
-        return wrap(this.request);
-      };
-    }
-    return function(...args) {
-      return wrap(func.apply(unwrap(this), args));
-    };
-  }
-  function transformCachableValue(value) {
-    if (typeof value === "function")
-      return wrapFunction(value);
-    if (value instanceof IDBTransaction)
-      cacheDonePromiseForTransaction(value);
-    if (instanceOfAny(value, getIdbProxyableTypes()))
-      return new Proxy(value, idbProxyTraps);
-    return value;
-  }
-  function wrap(value) {
-    if (value instanceof IDBRequest)
-      return promisifyRequest(value);
-    if (transformCache.has(value))
-      return transformCache.get(value);
-    const newValue = transformCachableValue(value);
-    if (!Object.is(newValue, value)) {
-      transformCache.set(value, newValue);
-      reverseTransformCache.set(newValue, value);
-    }
-    return newValue;
-  }
-  var unwrap = (value) => reverseTransformCache.get(value);
-  var readMethods = ["get", "getKey", "getAll", "getAllKeys", "count"];
-  var writeMethods = ["put", "add", "delete", "clear"];
-  var cachedMethods = {};
-  function getMethod(target, prop) {
-    if (!(target instanceof IDBDatabase && !(prop in target) && typeof prop === "string")) {
-      return;
-    }
-    if (cachedMethods[prop])
-      return cachedMethods[prop];
-    const targetFuncName = prop.replace(/FromIndex$/, "");
-    const useIndex = prop !== targetFuncName;
-    const isWrite = writeMethods.includes(targetFuncName);
-    if (
-      // Bail if the target doesn't exist on the target. Eg, getAll isn't in Edge.
-      !(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) || !(isWrite || readMethods.includes(targetFuncName))
-    ) {
-      return;
-    }
-    const method = async function(storeName, ...args) {
-      const tx = this.transaction(storeName, isWrite ? "readwrite" : "readonly");
-      let target2 = tx.store;
-      if (useIndex)
-        target2 = target2.index(args.shift());
-      return (await Promise.all([
-        target2[targetFuncName](...args),
-        isWrite && tx.done
-      ]))[0];
-    };
-    return cachedMethods[prop] = method;
-  }
-  replaceTraps((oldTraps) => ({
-    ...oldTraps,
-    get: (target, prop, receiver) => getMethod(target, prop) || oldTraps.get(target, prop, receiver),
-    has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop)
-  }));
-  var advanceMethodProps = ["advance", "continue", "continuePrimaryKey"];
-  var methodMap = {};
-  var advanceResults = /* @__PURE__ */ new WeakMap();
-  var ittrProxiedCursorToOriginalProxy = /* @__PURE__ */ new WeakMap();
-  var cursorIteratorTraps = {
-    get(target, prop) {
-      if (!advanceMethodProps.includes(prop))
-        return target[prop];
-      let cachedFunc = methodMap[prop];
-      if (!cachedFunc) {
-        cachedFunc = methodMap[prop] = function(...args) {
-          advanceResults.set(this, ittrProxiedCursorToOriginalProxy.get(this)[prop](...args));
-        };
-      }
-      return cachedFunc;
-    }
-  };
-  async function* iterate(...args) {
-    let cursor = this;
-    if (!(cursor instanceof IDBCursor)) {
-      cursor = await cursor.openCursor(...args);
-    }
-    if (!cursor)
-      return;
-    cursor = cursor;
-    const proxiedCursor = new Proxy(cursor, cursorIteratorTraps);
-    ittrProxiedCursorToOriginalProxy.set(proxiedCursor, cursor);
-    reverseTransformCache.set(proxiedCursor, unwrap(cursor));
-    while (cursor) {
-      yield proxiedCursor;
-      cursor = await (advanceResults.get(proxiedCursor) || cursor.continue());
-      advanceResults.delete(proxiedCursor);
-    }
-  }
-  function isIteratorProp(target, prop) {
-    return prop === Symbol.asyncIterator && instanceOfAny(target, [IDBIndex, IDBObjectStore, IDBCursor]) || prop === "iterate" && instanceOfAny(target, [IDBIndex, IDBObjectStore]);
-  }
-  replaceTraps((oldTraps) => ({
-    ...oldTraps,
-    get(target, prop, receiver) {
-      if (isIteratorProp(target, prop))
-        return iterate;
-      return oldTraps.get(target, prop, receiver);
-    },
-    has(target, prop) {
-      return isIteratorProp(target, prop) || oldTraps.has(target, prop);
-    }
-  }));
 
   // node_modules/zod/v4/classic/external.js
   var external_exports = {};
@@ -20019,6 +19817,306 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "Selesai"
   ];
 
+  // src/lib/workflow.ts
+  function transitionProblem(tables2, group, row, target, reason = "") {
+    const stages = group === "missions" ? missionStages : requestStages;
+    if (["Selesai", "Dibatalkan", "Ditutup"].includes(row.status))
+      return "Proses telah ditutup.";
+    if (target === "Dibatalkan")
+      return group !== "missions" ? "Status tidak valid." : String(reason ?? "").trim() ? "" : "Alasan pembatalan diperlukan.";
+    if (!stages.includes(target) || stages.indexOf(target) !== stages.indexOf(row.status) + 1)
+      return "Transisi tidak valid. Lanjutkan satu tahap sesuai urutan.";
+    if (group === "missions") {
+      if (!tables2.Requests.some((r) => r.id === row.requestId))
+        return "Permohonan terkait tidak ditemukan. Tinjau relasi misi.";
+      if (target === "Tim Ditugaskan" && !row.team) return "Tim diperlukan.";
+      if (target === "Berangkat") {
+        if ((tables2.FlightReviews ?? []).filter((r) => r.requestId === row.requestId).at(-1)?.status !== "Disetujui")
+          return "Persetujuan penerbangan diperlukan. Koordinator penerbangan harus mencatat tinjauan Disetujui; penilaian medis tidak menggantikannya.";
+        if (Array.isArray(row.resourceIds) && row.resourceIds.some(
+          (id) => !(tables2.Resources ?? []).some(
+            (r) => r.id === id && r.status === "Siap simulasi"
+          )
+        ))
+          return "Sumber daya yang ditugaskan belum Siap simulasi. Operator perlu meninjau kesiapan.";
+      }
+      if (target === "Selesai" && !(tables2.HandoverRecords ?? []).some(
+        (r) => r.missionId === row.id && r.requestId === row.requestId
+      ) && !String(reason ?? "").trim())
+        return "Serah terima atau alasan override diperlukan. Dokter/perawat atau Rumah sakit penerima perlu mencatat serah terima terkait.";
+    }
+    return "";
+  }
+
+  // src/lib/permissions.ts
+  var operational = [
+    "Operator",
+    "Koordinator medis",
+    "Koordinator penerbangan",
+    "Dokter/perawat",
+    "Rumah sakit penerima",
+    "Administrator"
+  ];
+  var mutations = {
+    "requests.create": operational,
+    "requests.update": ["Operator"],
+    "requests.transition": ["Operator"],
+    "missions.assign": ["Operator"],
+    "missions.reassign": ["Operator"],
+    "missions.transition": ["Operator"],
+    "medicalReviews.save": ["Koordinator medis"],
+    "flightReviews.save": ["Koordinator penerbangan"],
+    "patientNotes.create": ["Dokter/perawat"],
+    "checklists.save": ["Dokter/perawat", "Koordinator penerbangan"],
+    "handovers.save": ["Dokter/perawat", "Rumah sakit penerima"],
+    "resources.update": ["Operator"],
+    "resources.create": [],
+    "facilities.create": [],
+    "facilities.update": [],
+    "aircraftReports.create": ["Koordinator penerbangan", "Dokter/perawat"]
+  };
+  var readGroups = [
+    "requests",
+    "missions",
+    "medicalReviews",
+    "flightReviews",
+    "patientNotes",
+    "checklists",
+    "handovers",
+    "resources",
+    "facilities",
+    "activity",
+    "aircraft",
+    "aircraftReports"
+  ];
+  function canReadTable(actor, table) {
+    if (!actor || !operational.includes(actor.role)) return false;
+    return table !== "PatientNotes" || ["Dokter/perawat", "Koordinator medis", "Administrator"].includes(
+      actor.role
+    );
+  }
+  function canAction(actor, action) {
+    if (action === "auth.me") return !!actor;
+    if (action === "requests.create" && !actor) return true;
+    if (!actor) return false;
+    if (action === "leadership.summary")
+      return ["Administrator", "Viewer pimpinan"].includes(actor.role);
+    if (actor.role === "Viewer pimpinan") return false;
+    if (["reports.summary", "aircraft.snapshot"].includes(action))
+      return operational.includes(actor.role);
+    const [group, verb] = action.split(".");
+    if (readGroups.includes(group) && ["list", "get"].includes(verb))
+      return canReadTable(
+        actor,
+        group === "patientNotes" ? "PatientNotes" : group
+      );
+    return Object.hasOwn(mutations, action) && (actor.role === "Administrator" || mutations[action].includes(actor.role));
+  }
+
+  // node_modules/idb/build/index.js
+  var instanceOfAny = (object2, constructors) => constructors.some((c) => object2 instanceof c);
+  var idbProxyableTypes;
+  var cursorAdvanceMethods;
+  function getIdbProxyableTypes() {
+    return idbProxyableTypes || (idbProxyableTypes = [
+      IDBIndex,
+      IDBObjectStore,
+      IDBCursor,
+      IDBDatabase,
+      IDBTransaction
+    ]);
+  }
+  function getCursorAdvanceMethods() {
+    return cursorAdvanceMethods || (cursorAdvanceMethods = ["advance", "continue", "continuePrimaryKey"].map((method) => IDBCursor.prototype[method]));
+  }
+  var transactionDoneMap = /* @__PURE__ */ new WeakMap();
+  var transformCache = /* @__PURE__ */ new WeakMap();
+  var reverseTransformCache = /* @__PURE__ */ new WeakMap();
+  function promisifyRequest(request) {
+    const promise2 = new Promise((resolve, reject) => {
+      const unlisten = () => {
+        request.removeEventListener("success", success2);
+        request.removeEventListener("error", error62);
+      };
+      const success2 = () => {
+        resolve(wrap(request.result));
+        unlisten();
+      };
+      const error62 = () => {
+        reject(request.error);
+        unlisten();
+      };
+      request.addEventListener("success", success2);
+      request.addEventListener("error", error62);
+    });
+    reverseTransformCache.set(promise2, request);
+    return promise2;
+  }
+  function cacheDonePromiseForTransaction(tx) {
+    if (transactionDoneMap.has(tx))
+      return;
+    const done = new Promise((resolve, reject) => {
+      const unlisten = () => {
+        tx.removeEventListener("complete", complete);
+        tx.removeEventListener("error", error62);
+        tx.removeEventListener("abort", error62);
+      };
+      const complete = () => {
+        resolve();
+        unlisten();
+      };
+      const error62 = () => {
+        reject(tx.error || new DOMException("AbortError", "AbortError"));
+        unlisten();
+      };
+      tx.addEventListener("complete", complete);
+      tx.addEventListener("error", error62);
+      tx.addEventListener("abort", error62);
+    });
+    transactionDoneMap.set(tx, done);
+  }
+  var idbProxyTraps = {
+    get(target, prop, receiver) {
+      if (target instanceof IDBTransaction) {
+        if (prop === "done")
+          return transactionDoneMap.get(target);
+        if (prop === "store") {
+          return receiver.objectStoreNames[1] ? void 0 : receiver.objectStore(receiver.objectStoreNames[0]);
+        }
+      }
+      return wrap(target[prop]);
+    },
+    set(target, prop, value) {
+      target[prop] = value;
+      return true;
+    },
+    has(target, prop) {
+      if (target instanceof IDBTransaction && (prop === "done" || prop === "store")) {
+        return true;
+      }
+      return prop in target;
+    }
+  };
+  function replaceTraps(callback) {
+    idbProxyTraps = callback(idbProxyTraps);
+  }
+  function wrapFunction(func) {
+    if (getCursorAdvanceMethods().includes(func)) {
+      return function(...args) {
+        func.apply(unwrap(this), args);
+        return wrap(this.request);
+      };
+    }
+    return function(...args) {
+      return wrap(func.apply(unwrap(this), args));
+    };
+  }
+  function transformCachableValue(value) {
+    if (typeof value === "function")
+      return wrapFunction(value);
+    if (value instanceof IDBTransaction)
+      cacheDonePromiseForTransaction(value);
+    if (instanceOfAny(value, getIdbProxyableTypes()))
+      return new Proxy(value, idbProxyTraps);
+    return value;
+  }
+  function wrap(value) {
+    if (value instanceof IDBRequest)
+      return promisifyRequest(value);
+    if (transformCache.has(value))
+      return transformCache.get(value);
+    const newValue = transformCachableValue(value);
+    if (!Object.is(newValue, value)) {
+      transformCache.set(value, newValue);
+      reverseTransformCache.set(newValue, value);
+    }
+    return newValue;
+  }
+  var unwrap = (value) => reverseTransformCache.get(value);
+  var readMethods = ["get", "getKey", "getAll", "getAllKeys", "count"];
+  var writeMethods = ["put", "add", "delete", "clear"];
+  var cachedMethods = {};
+  function getMethod(target, prop) {
+    if (!(target instanceof IDBDatabase && !(prop in target) && typeof prop === "string")) {
+      return;
+    }
+    if (cachedMethods[prop])
+      return cachedMethods[prop];
+    const targetFuncName = prop.replace(/FromIndex$/, "");
+    const useIndex = prop !== targetFuncName;
+    const isWrite = writeMethods.includes(targetFuncName);
+    if (
+      // Bail if the target doesn't exist on the target. Eg, getAll isn't in Edge.
+      !(targetFuncName in (useIndex ? IDBIndex : IDBObjectStore).prototype) || !(isWrite || readMethods.includes(targetFuncName))
+    ) {
+      return;
+    }
+    const method = async function(storeName, ...args) {
+      const tx = this.transaction(storeName, isWrite ? "readwrite" : "readonly");
+      let target2 = tx.store;
+      if (useIndex)
+        target2 = target2.index(args.shift());
+      return (await Promise.all([
+        target2[targetFuncName](...args),
+        isWrite && tx.done
+      ]))[0];
+    };
+    return cachedMethods[prop] = method;
+  }
+  replaceTraps((oldTraps) => ({
+    ...oldTraps,
+    get: (target, prop, receiver) => getMethod(target, prop) || oldTraps.get(target, prop, receiver),
+    has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop)
+  }));
+  var advanceMethodProps = ["advance", "continue", "continuePrimaryKey"];
+  var methodMap = {};
+  var advanceResults = /* @__PURE__ */ new WeakMap();
+  var ittrProxiedCursorToOriginalProxy = /* @__PURE__ */ new WeakMap();
+  var cursorIteratorTraps = {
+    get(target, prop) {
+      if (!advanceMethodProps.includes(prop))
+        return target[prop];
+      let cachedFunc = methodMap[prop];
+      if (!cachedFunc) {
+        cachedFunc = methodMap[prop] = function(...args) {
+          advanceResults.set(this, ittrProxiedCursorToOriginalProxy.get(this)[prop](...args));
+        };
+      }
+      return cachedFunc;
+    }
+  };
+  async function* iterate(...args) {
+    let cursor = this;
+    if (!(cursor instanceof IDBCursor)) {
+      cursor = await cursor.openCursor(...args);
+    }
+    if (!cursor)
+      return;
+    cursor = cursor;
+    const proxiedCursor = new Proxy(cursor, cursorIteratorTraps);
+    ittrProxiedCursorToOriginalProxy.set(proxiedCursor, cursor);
+    reverseTransformCache.set(proxiedCursor, unwrap(cursor));
+    while (cursor) {
+      yield proxiedCursor;
+      cursor = await (advanceResults.get(proxiedCursor) || cursor.continue());
+      advanceResults.delete(proxiedCursor);
+    }
+  }
+  function isIteratorProp(target, prop) {
+    return prop === Symbol.asyncIterator && instanceOfAny(target, [IDBIndex, IDBObjectStore, IDBCursor]) || prop === "iterate" && instanceOfAny(target, [IDBIndex, IDBObjectStore]);
+  }
+  replaceTraps((oldTraps) => ({
+    ...oldTraps,
+    get(target, prop, receiver) {
+      if (isIteratorProp(target, prop))
+        return iterate;
+      return oldTraps.get(target, prop, receiver);
+    },
+    has(target, prop) {
+      return isIteratorProp(target, prop) || oldTraps.has(target, prop);
+    }
+  }));
+
   // node_modules/@noble/hashes/_u64.js
   var fromNumH = (n) => n / 2 ** 32 | 0;
   var fromNumL = (n) => n >>> 0;
@@ -20800,17 +20898,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       }
     };
   }
-  var grants = {
-    requests: ["Operator"],
-    resources: ["Operator"],
-    missions: ["Operator"],
-    medicalReviews: ["Koordinator medis"],
-    flightReviews: ["Koordinator penerbangan"],
-    patientNotes: ["Dokter/perawat"],
-    checklists: ["Dokter/perawat", "Koordinator penerbangan"],
-    handovers: ["Rumah sakit penerima", "Dokter/perawat"],
-    aircraftReports: ["Koordinator penerbangan", "Dokter/perawat"]
-  };
   var tables = {
     requests: "Requests",
     missions: "Missions",
@@ -20833,7 +20920,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       );
     return parsed.data;
   }
-  function execute(s, actor, action, p) {
+  function execute(s, actor, action, p, now = Date.now()) {
+    const at = new Date(now).toISOString();
+    const createRecord = (data) => record2({ ...data, createdAt: at, updatedAt: at });
     if (action === "auth.me") return actor;
     const [group, verb] = action.split(".");
     const table = tables[group];
@@ -20850,13 +20939,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       throw Error(
         "FORBIDDEN: Gunakan ringkasan pengawasan pimpinan; data operasional rinci dibatasi"
       );
+    if (!canAction(actor, action))
+      throw Error("FORBIDDEN: Peran tidak berwenang untuk tindakan ini");
     if (action === "aircraft.snapshot") return aviationSnapshot(s.tables);
     if (verb === "list" || verb === "get") {
       if (!table) throw Error("ACTION: Action tidak tersedia");
       let rows = s.tables[table];
-      if (group === "patientNotes" && actor && !["Dokter/perawat", "Koordinator medis", "Administrator"].includes(
-        actor.role
-      ))
+      if (group === "patientNotes" && actor && !canReadTable(actor, "PatientNotes"))
         throw Error("FORBIDDEN: Catatan dibatasi");
       if (verb === "get") return rows.find((r) => r.id === p.id) ?? null;
       rows = rows.filter(
@@ -20873,13 +20962,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     if (action === "reports.summary")
       return Object.fromEntries(
         Object.entries(s.tables).filter(
-          ([key]) => key !== "PatientNotes" || ["Dokter/perawat", "Koordinator medis", "Administrator"].includes(
-            actor.role
-          )
+          ([key]) => key !== "PatientNotes" || canReadTable(actor, "PatientNotes")
         )
       );
-    if (actor?.role !== "Administrator" && !(grants[group] ?? []).includes(actor?.role) && !(action === "requests.create"))
-      throw Error("FORBIDDEN: Peran tidak berwenang");
     if (!table || !["create", "update", "transition", "assign", "save", "reassign"].includes(
       verb
     ))
@@ -20938,21 +21023,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         );
       if (data.missionId && !s.tables.Missions.some((m) => m.id === data.missionId))
         throw Error("VALIDATION: Referensi misi tidak ditemukan");
-      const now = (/* @__PURE__ */ new Date()).toISOString();
-      if (data.lat !== "") aircraft.positionReportedAt = now;
+      if (data.lat !== "") aircraft.positionReportedAt = at;
       aircraft.lat = data.lat === "" ? aircraft.lat : data.lat;
       aircraft.lng = data.lng === "" ? aircraft.lng : data.lng;
       aircraft.status = data.aircraftStatus;
       aircraft.missionId = data.missionId;
-      aircraft.updatedAt = now;
+      aircraft.updatedAt = at;
       aircraft.updatedBy = owner;
       aircraft.revision++;
-      row = record2({
+      row = createRecord({
         ...data,
         id: p.id ?? crypto.randomUUID(),
         lat: aircraft.lat,
         lng: aircraft.lng,
-        reportedAt: now,
+        reportedAt: at,
         aircraftRevision: aircraft.revision,
         positionSupplied: data.lat !== "",
         status: "Dicatat",
@@ -20963,7 +21047,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     } else if (action === "requests.create") {
       if (row) throw Error("CONFLICT: ID sudah digunakan");
       const data = parseRequest(p.data);
-      row = record2({
+      row = createRecord({
         ...data,
         id: p.id ?? crypto.randomUUID(),
         status: "Tercatat di Server",
@@ -20980,7 +21064,25 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         throw Error("WORKFLOW: Permohonan harus dalam koordinasi");
       if (s.tables.Missions.some((r) => r.requestId === p.requestId))
         throw Error("WORKFLOW: Misi sudah dibuat");
-      row = record2({
+      const resourceIds = p.resourceIds ?? [];
+      if (!Array.isArray(resourceIds) || new Set(resourceIds).size !== resourceIds.length || resourceIds.some(
+        (id) => !s.tables.Resources.some(
+          (r) => r.id === id && r.status === "Siap simulasi"
+        )
+      ))
+        throw Error(
+          "WORKFLOW: Sumber daya harus tersedia dan berstatus Siap simulasi. Tinjau sumber daya terlebih dahulu."
+        );
+      if (p.aircraftId && !s.tables.Aircraft.some(
+        (a) => a.id === p.aircraftId && a.isSynthetic === true
+      ))
+        throw Error("VALIDATION: Helikopter sintetis tidak ditemukan");
+      if (p.receivingFacilityId && !s.tables.Facilities.some((f) => f.id === p.receivingFacilityId))
+        throw Error("VALIDATION: Fasilitas penerima tidak ditemukan");
+      row = createRecord({
+        ...p.aircraftId ? { aircraftId: p.aircraftId } : {},
+        ...p.receivingFacilityId ? { receivingFacilityId: p.receivingFacilityId } : {},
+        ...resourceIds.length ? { resourceIds } : {},
         id: p.id ?? crypto.randomUUID(),
         requestId: p.requestId,
         status: "Persiapan",
@@ -20989,8 +21091,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       });
       s.tables.Missions.push(row);
       s.tables.MissionAssignments.push(
-        record2({
+        createRecord({
           missionId: row.id,
+          ...row.resourceIds ? { resourceIds: row.resourceIds } : {},
+          ...row.aircraftId ? { aircraftId: row.aircraftId } : {},
           team: p.team,
           createdBy: owner,
           status: "Ditugaskan"
@@ -21009,13 +21113,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         (a) => a.missionId === row.id && a.status === "Ditugaskan"
       )) {
         assignment.status = "Diganti";
-        assignment.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+        assignment.updatedAt = at;
         assignment.updatedBy = owner;
         assignment.revision++;
       }
       s.tables.MissionAssignments.push(
-        record2({
+        createRecord({
           missionId: row.id,
+          ...row.resourceIds ? { resourceIds: row.resourceIds } : {},
+          ...row.aircraftId ? { aircraftId: row.aircraftId } : {},
           team: row.team,
           reason: row.reason,
           createdBy: owner,
@@ -21039,7 +21145,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         );
       if (row) Object.assign(row, parsed.data);
       else {
-        row = record2({
+        row = createRecord({
           ...parsed.data,
           id: p.id ?? crypto.randomUUID(),
           createdBy: owner
@@ -21062,25 +21168,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       if (p.reason !== void 0 && (typeof p.reason !== "string" || p.reason.length > 500))
         throw Error("VALIDATION: Alasan tidak valid");
       if (!row) throw Error("NOT_FOUND: Record tidak ditemukan");
-      const stages = group === "missions" ? missionStages : requestStages;
-      if (p.status === "Dibatalkan" && group !== "missions")
-        throw Error("WORKFLOW: Status tidak valid");
-      if (p.status === "Dibatalkan" && !String(p.reason ?? "").trim())
-        throw Error("WORKFLOW: Alasan pembatalan diperlukan");
-      if (row.status === "Selesai" || row.status === "Dibatalkan")
-        throw Error("WORKFLOW: Misi telah ditutup");
-      if (p.status !== "Dibatalkan" && stages.indexOf(String(p.status)) !== stages.indexOf(row.status) + 1)
-        throw Error("WORKFLOW: Transisi tidak valid");
-      if (p.status === "Berangkat" && s.tables.FlightReviews.filter((r) => r.requestId === row.requestId).at(
-        -1
-      )?.status !== "Disetujui")
-        throw Error("WORKFLOW: Persetujuan penerbangan diperlukan");
-      if (p.status === "Tim Ditugaskan" && !row.team)
-        throw Error("WORKFLOW: Tim diperlukan");
-      if (p.status === "Selesai" && !s.tables.HandoverRecords.some((r) => r.missionId === row.id) && !String(p.reason ?? "").trim())
-        throw Error("WORKFLOW: Serah terima atau alasan override diperlukan");
+      const problem = transitionProblem(
+        s.tables,
+        group,
+        row,
+        String(p.status),
+        p.reason
+      );
+      if (problem) throw Error("WORKFLOW: " + problem);
       row.status = p.status;
-      if (group === "missions") row.stageChangedAt = (/* @__PURE__ */ new Date()).toISOString();
+      if (group === "missions") row.stageChangedAt = at;
       if (p.reason) row.reason = p.reason;
     } else if (["save", "create"].includes(verb)) {
       if (group === "flightReviews" && ![
@@ -21133,7 +21230,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       };
       if (row) Object.assign(row, data);
       else {
-        row = record2({
+        row = createRecord({
           ...data,
           id: p.id ?? crypto.randomUUID(),
           createdBy: owner
@@ -21141,17 +21238,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         s.tables[table].push(row);
       }
     } else throw Error("ACTION: Action tidak tersedia");
-    row.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const scenarioParent = s.tables.Requests.find((r) => r.id === row.requestId) ?? s.tables.Missions.find((m) => m.id === row.missionId) ?? s.tables.Aircraft.find((a) => a.id === row.aircraftId);
+    if (scenarioParent?.demoScenario)
+      row.demoScenario = scenarioParent.demoScenario;
+    if (row.demoScenario) {
+      for (const assignment of s.tables.MissionAssignments)
+        if (assignment.missionId === row.id)
+          assignment.demoScenario = row.demoScenario;
+    }
+    row.updatedAt = at;
     row.updatedBy = owner;
     row.revision = (priorRevision ?? 0) + 1;
     s.tables.ActivityLogs.unshift(
-      record2({
+      createRecord({
+        ...row.demoScenario ? { demoScenario: row.demoScenario } : {},
         action,
         entityId: row.id,
         createdBy: owner,
         status: row.status,
         previousStatus,
-        durationSeconds: previousUpdatedAt ? Math.max(0, (Date.now() - Date.parse(previousUpdatedAt)) / 1e3) : 0,
+        durationSeconds: previousUpdatedAt ? Math.max(0, (now - Date.parse(previousUpdatedAt)) / 1e3) : 0,
         reason: String(p.reason ?? row.reason ?? "")
       })
     );

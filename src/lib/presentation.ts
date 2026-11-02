@@ -15,10 +15,12 @@ const tables: Record<string, string> = {
   AircraftReports: "Laporan awak",
 };
 export const tableLabel = (key: string) => tables[key] ?? key;
-export function displayStatus(status: string, demo: boolean) {
-  if (status === "Tercatat di Server")
-    return demo ? "Tersimpan di perangkat" : "Tercatat di server";
+export const recordSourceLabel = (demo: boolean) =>
+  demo ? "Tersimpan di perangkat" : "Tersinkron ke server";
+export function displayStatus(status: string, _demo: boolean) {
+  if (status === "Tercatat di Server") return "Permohonan baru";
   if (status === "Menunggu jaringan") return "Menunggu sinkronisasi";
+  if (status === "Konflik perubahan") return "Perlu tinjauan konflik";
   return status;
 }
 export function actionLabel(action: string) {

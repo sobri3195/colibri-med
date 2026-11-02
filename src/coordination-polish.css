@@ -565,3 +565,79 @@
     overflow-y: auto;
   }
 }
+.coordination-app .scenario-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #b7d8d7;
+  border-radius: 14px;
+  background: #e7f5f4;
+  color: #066873;
+  min-height: 48px;
+  margin: 20px 0;
+  font-weight: 650;
+}
+.coordination-app .scenario-guide {
+  list-style: decimal;
+  padding-left: 24px;
+}
+.coordination-app .scenario-guide li {
+  margin: 12px 0;
+}
+.coordination-app .scenario-guide a {
+  color: #066873;
+  text-decoration: underline;
+}
+.coordination-app .scenario-grid {
+  display: grid;
+  gap: 20px;
+}
+.coordination-app .scenario-card {
+  margin: 0;
+}
+.coordination-app .scenario-card .notice button {
+  margin: 8px 8px 0 0;
+}
+@media (min-width: 900px) {
+  .coordination-app .scenario-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.coordination-app .workflow-summary {
+  padding: 20px 0;
+  border-top: 1px solid #d9e2ec;
+  border-bottom: 1px solid #d9e2ec;
+  margin-bottom: 20px;
+}
+.coordination-app .workflow-summary dl {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0;
+}
+.coordination-app .workflow-summary dt {
+  color: #526579;
+  font-size: 13px;
+}
+.coordination-app .workflow-summary dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+.coordination-app .workflow-summary a {
+  color: #066873;
+  text-decoration: underline;
+}
+.coordination-app .storage-status {
+  font-size: 13px;
+  color: #526579;
+}
+.saving-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.saving-fields:disabled {
+  opacity: 0.85;
+}

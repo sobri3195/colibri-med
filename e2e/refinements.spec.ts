@@ -98,7 +98,7 @@ test("two browser tabs preserve a stale review draft and allow archiving its con
   );
   await second.getByRole("link", { name: "Outbox & notifikasi" }).click();
   const conflict = second.locator("details").filter({
-    has: second.locator("summary", { hasText: "Konflik perubahan" }),
+    has: second.locator("summary", { hasText: "Perlu tinjauan konflik" }),
   });
   await conflict.locator(":scope > summary").click();
   await conflict

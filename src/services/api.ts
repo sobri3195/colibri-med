@@ -1,6 +1,12 @@
 import type { Actor, Operation, Result } from "../types";
 import { demoCall } from "./demo";
-import { queue, outbox, dequeue, saveReceipt } from "./storage";
+import {
+  queue,
+  outbox,
+  dequeue,
+  saveReceipt,
+  notifyDataChanged,
+} from "./storage";
 import { ApiError, blockedDelivery, deliveryStatus } from "../lib/errors";
 export const mode =
   import.meta.env.VITE_APP_MODE === "connected" ? "connected" : "demo";
@@ -33,10 +39,27 @@ export async function call(
         window.dispatchEvent(new Event("colibri-session-expired"));
       throw new ApiError(code, r.error?.message ?? "Permintaan gagal");
     }
+    if (
+      !/\.(list|get|summary|snapshot)$/.test(action) &&
+      !action.startsWith("auth.")
+    )
+      notifyDataChanged();
     return r.data;
   } finally {
     clearTimeout(timer);
   }
+}
+function assertAcknowledged(op: Operation, result: any) {
+  if (
+    !result ||
+    result.id !== op.entityId ||
+    !Number.isInteger(result.revision) ||
+    result.revision < 1
+  )
+    throw new ApiError(
+      "UPSTREAM",
+      "Konfirmasi penyimpanan belum valid. Operasi tetap di Outbox; kirim ulang operasi yang sama, jangan buat duplikat.",
+    );
 }
 export async function submit(
   actor: Actor | null,
@@ -69,6 +92,7 @@ export async function submit(
   if (!navigator.onLine || pending.length) return { queued: true };
   try {
     const result = await call(action, op.payload, actor);
+    assertAcknowledged(op, result);
     await saveReceipt(owner, op, result);
     await dequeue(owner, op.operationId);
     return result;
@@ -105,6 +129,7 @@ export async function retry(actor: Actor | null) {
       try {
         await queue(owner, { ...op, status: "Mengirim" });
         const result = await call(op.action, op.payload, actor);
+        assertAcknowledged(op, result);
         await saveReceipt(owner, op, result);
         await dequeue(owner, op.operationId);
         sent++;

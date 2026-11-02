@@ -67,9 +67,7 @@ function service_(actor, action, p) {
             : [tables[group]];
   if (
     action === "reports.summary" &&
-    ["Dokter/perawat", "Koordinator medis", "Administrator"].indexOf(
-      actor.role,
-    ) < 0
+    !Domain.canReadTable(actor, "PatientNotes")
   )
     names = names.filter(function (n) {
       return n !== "PatientNotes";
