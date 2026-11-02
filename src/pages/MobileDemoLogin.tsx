@@ -14,6 +14,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import BrandMark from "../components/BrandMark";
+import { Button } from "../components/DesignSystem";
 import { useConnection } from "../features/useConnection";
 import { roles, type Role } from "../types";
 import "./mobile-login.css";
@@ -52,7 +53,7 @@ export default function MobileDemoLogin({
             <strong>
               COLIBRI <span>MED</span>
             </strong>
-            <p>Koordinasi Medis Udara</p>
+            <p>COLIBRI Air Medical</p>
           </div>
         </div>
         <div className="login-meta">
@@ -63,7 +64,7 @@ export default function MobileDemoLogin({
           </span>
         </div>
         <div className="login-intro-copy">
-          <p className="login-kicker">RUANG KOORDINASI</p>
+          <p className="login-kicker">TERHUBUNG UNTUK MENGOORDINASIKAN</p>
           <h1 id="demo-login-title">Masuk ke ruang koordinasi</h1>
           <p>Pilih peran untuk mencoba alur koordinasi evakuasi medis udara.</p>
           <FlightAccent />
@@ -117,10 +118,10 @@ export default function MobileDemoLogin({
               {error}
             </p>
           )}
-          <button className="login-enter" type="submit">
+          <Button className="login-enter" type="submit">
             <span>Masuk sebagai {role}</span>
             <ArrowRight size={20} aria-hidden="true" />
-          </button>
+          </Button>
           <p className="login-demo-note">
             <Info size={18} aria-hidden="true" />
             <span>

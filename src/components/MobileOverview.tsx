@@ -1,3 +1,10 @@
+import { DataCard } from "./DesignSystem";
+import {
+  ArrowUpRight,
+  TriangleAlert,
+  ClipboardList,
+  Plane,
+} from "lucide-react";
 import { attentionItems } from "../features/leadership/presentation";
 import { listDate } from "../lib/presentation";
 import { useCallback, useState } from "react";
@@ -27,15 +34,33 @@ export default function MobileOverview({ actor }: { actor: Actor }) {
       {counts && (
         <div className="overview-counts">
           {["Permohonan belum direspons", "Misi aktif"].map((label) => (
-            <article key={label}>
+            <DataCard key={label}>
+              {label === "Misi aktif" ? (
+                <Plane size={20} aria-hidden="true" />
+              ) : (
+                <ClipboardList size={20} aria-hidden="true" />
+              )}
               <strong>{counts[label as keyof typeof counts]}</strong>
               <span>{label}</span>
-            </article>
+            </DataCard>
           ))}
         </div>
       )}
       {data && (
         <>
+          {counts && counts["Permohonan belum direspons"] > 0 && (
+            <Link className="home-attention" to="/mobile/operasi/permohonan">
+              <TriangleAlert size={20} aria-hidden="true" />
+              <span>
+                <strong>Perlu perhatian</strong>
+                <span>
+                  {counts["Permohonan belum direspons"]} permohonan menunggu
+                  respons petugas
+                </span>
+              </span>
+              <ArrowUpRight size={20} aria-hidden="true" />
+            </Link>
+          )}
           <SectionHeading title="Permohonan terbaru">
             <Link to="/mobile/operasi/permohonan">Lihat semua</Link>
           </SectionHeading>

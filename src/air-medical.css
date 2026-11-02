@@ -1,0 +1,1359 @@
+/* COLIBRI Air Medical: one semantic palette for public, operational and leadership screens. */
+:root {
+  --air-navy: #102a43;
+  --air-navy-dark: #0b1f33;
+  --air-teal: #087f8c;
+  --air-teal-hover: #066873;
+  --air-soft: #e7f5f4;
+  --air-bg: #f4f7fb;
+  --air-surface: #fff;
+  --air-text: #172b4d;
+  --air-secondary: #526579;
+  --air-border: #d9e2ec;
+  --air-danger: #b42318;
+  --air-amber: #855100;
+  --air-shadow: 0 4px 20px #102a4306;
+  --coord-navy: var(--air-navy);
+  --coord-teal: var(--air-teal);
+  --coord-text: var(--air-text);
+  --coord-secondary: var(--air-secondary);
+  --coord-border: var(--air-border);
+  --coord-soft: var(--air-soft);
+  --login-navy: var(--air-navy);
+  --login-navy-dark: var(--air-navy-dark);
+  --login-teal: var(--air-teal);
+  --login-teal-hover: var(--air-teal-hover);
+  --login-soft: var(--air-soft);
+  --login-bg: var(--air-bg);
+  --login-surface: var(--air-surface);
+  --login-text: var(--air-text);
+  --login-secondary: var(--air-secondary);
+  --login-border: var(--air-border);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: var(--air-text);
+  background: var(--air-bg);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.app-shell,
+.app-shell.coordination-app {
+  color: var(--air-text);
+  background: var(--air-bg);
+}
+.app-shell :is(h1, h2, h3, strong, a, label) {
+  overflow-wrap: anywhere;
+}
+.app-shell h1 {
+  font-size: clamp(26px, 3vw, 32px);
+  letter-spacing: -0.8px;
+  line-height: 1.2;
+  font-weight: 750;
+}
+.app-shell h2 {
+  font-size: 20px;
+  letter-spacing: -0.35px;
+}
+.app-shell h3 {
+  font-size: 16px;
+}
+.app-shell :is(small, .muted, .form-help) {
+  color: var(--air-secondary);
+}
+.app-shell :is(button, .button) {
+  min-height: 44px;
+  border-radius: 13px;
+  background: var(--air-teal);
+  font-size: 14px;
+  transition:
+    background-color 180ms,
+    border-color 180ms,
+    box-shadow 180ms;
+}
+.app-shell :is(button, .button):hover {
+  filter: none;
+  background: var(--air-teal-hover);
+}
+.app-shell :is(button, .button).secondary {
+  background: var(--air-surface);
+  color: var(--air-navy);
+  border: 1px solid var(--air-border);
+}
+.app-shell :is(button, .button).secondary:hover {
+  background: var(--air-soft);
+  border-color: var(--air-teal);
+}
+.app-shell button.tertiary {
+  background: transparent;
+  color: var(--air-teal-hover);
+  text-underline-offset: 4px;
+}
+.app-shell button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.app-shell :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--air-teal);
+  outline-offset: 4px;
+}
+.app-shell :is(input, select, textarea) {
+  min-height: 48px;
+  font-size: 16px;
+  border: 1px solid var(--air-border);
+  border-radius: 12px;
+  color: var(--air-text);
+  background: var(--air-surface);
+  padding: 12px;
+}
+.app-shell input[type="checkbox"],
+.app-shell input[type="radio"] {
+  min-height: 20px;
+  accent-color: var(--air-teal);
+}
+.app-shell :is(input, select, textarea):focus {
+  border-color: var(--air-teal);
+}
+.app-shell label {
+  font-size: 14px;
+}
+.app-shell input::placeholder {
+  color: var(--air-secondary);
+  opacity: 1;
+}
+.app-shell
+  :is(
+    .card,
+    .mobile-record,
+    .overview-mission,
+    .mobile-shortcut,
+    .login-panel,
+    .aircraft-detail-panel
+  ) {
+  background: var(--air-surface);
+  background-image: none;
+  border: 1px solid var(--air-border);
+  border-radius: 20px;
+  box-shadow: var(--air-shadow);
+}
+.app-shell .card {
+  padding: 24px;
+}
+.app-shell .eyebrow {
+  color: var(--air-teal-hover);
+  letter-spacing: 1.6px;
+  font-size: 10px;
+}
+.app-shell > .simulation {
+  background: var(--air-navy-dark);
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 6px 20px;
+}
+.app-shell > header,
+.app-shell .mobile-header {
+  background: var(--air-navy);
+  color: white;
+  border: 0;
+}
+.app-shell > header {
+  padding: 16px max(20px, calc((100vw - 1280px) / 2));
+}
+.app-shell .brand {
+  font-size: 21px;
+  letter-spacing: 0.6px;
+}
+.app-shell .brand b,
+.app-shell .brand small {
+  color: #a7dadd;
+}
+.app-shell .brand small {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.app-shell .brand-mark {
+  object-fit: contain;
+}
+.app-shell main {
+  max-width: 1366px;
+  padding: 32px 32px;
+}
+.app-shell .mobile-header {
+  margin: 0 -20px;
+  padding: 18px 20px;
+  width: calc(100% + 40px);
+  border-radius: 0 0 20px 20px;
+}
+.app-shell .mobile-header .brand {
+  color: white;
+}
+.app-shell .mobile-header .brand :is(b, small) {
+  color: #a7dadd;
+}
+.app-shell .mobile-profile {
+  background: #ffffff12;
+  border: 1px solid #ffffff30;
+  color: white;
+  min-width: 44px;
+  min-height: 44px;
+}
+.app-shell .mobile-connection {
+  padding: 12px 0;
+  margin: 4px 0 8px;
+}
+.app-shell .page-heading,
+.app-shell .leadership-heading {
+  background: var(--air-navy);
+  color: white;
+  padding: 24px;
+  border-radius: 20px;
+  align-items: start;
+}
+.app-shell .page-heading h1,
+.app-shell .leadership-heading h1 {
+  margin-bottom: 8px;
+  color: white;
+}
+.app-shell .page-heading :is(small, .eyebrow),
+.app-shell .leadership-heading .eyebrow {
+  color: #b9d6df;
+}
+.app-shell .page-heading button.secondary,
+.app-shell .leadership-heading button.secondary {
+  color: white;
+  background: #ffffff12;
+  border-color: #ffffff40;
+}
+.app-shell .page-heading button.secondary:hover,
+.app-shell .leadership-heading button.secondary:hover {
+  background: #ffffff25;
+}
+.app-shell .toolbar,
+.app-shell .leadership-filters {
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid var(--air-border);
+  background: white;
+  align-items: end;
+}
+.app-shell .toolbar label {
+  margin-bottom: 0;
+}
+.app-shell .toolbar input {
+  max-width: none;
+}
+.app-shell .badge {
+  border-radius: 7px;
+  font-weight: 650;
+  font-size: 12px;
+}
+.app-shell .status-neutral {
+  background: #edf2f7;
+  color: #34516b;
+}
+.app-shell .status-success {
+  background: var(--air-soft);
+  color: var(--air-teal-hover);
+}
+.app-shell .status-attention {
+  background: #fff4dc;
+  color: var(--air-amber);
+}
+.app-shell .status-danger {
+  background: #fff0ee;
+  color: var(--air-danger);
+}
+.app-shell .coord-empty {
+  background: var(--air-bg);
+  border: 1px dashed #b9c8d7;
+  border-radius: 16px;
+  padding: 28px 20px;
+  text-align: center;
+}
+.app-shell .coord-empty > svg {
+  color: var(--air-teal);
+  padding: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--air-soft);
+}
+/* Strong, compact identity on both entry points. */
+.app-shell .air-home-hero,
+.app-shell .mobile-welcome {
+  background: var(--air-navy);
+  color: white;
+  border-radius: 22px;
+  position: relative;
+  overflow: hidden;
+}
+.app-shell .air-home-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  align-items: center;
+  padding: 40px;
+  gap: 24px;
+}
+.app-shell .hero-copy {
+  min-width: 0;
+}
+.app-shell .air-home-hero h1 {
+  font-size: clamp(28px, 3.4vw, 44px);
+  max-width: 480px;
+}
+.app-shell .air-home-hero p {
+  font-size: 15px;
+  color: #d9e2ec;
+  max-width: 480px;
+}
+.app-shell .air-home-hero .hero-greeting {
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.app-shell .air-home-hero .eyebrow,
+.app-shell .mobile-welcome .eyebrow {
+  color: #a7dadd;
+}
+.app-shell .air-home-hero small {
+  display: block;
+  color: #b9d6df;
+  margin-top: 16px;
+}
+.app-shell .air-home-hero .login-flight {
+  width: 100%;
+  max-width: 520px;
+  margin: 0;
+  color: #a7dadd;
+}
+.app-shell .home-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.app-shell .home-links a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: white;
+  border: 1px solid var(--air-border);
+  border-radius: 18px;
+  font-weight: 650;
+}
+.app-shell .home-links svg {
+  flex-shrink: 0;
+  color: var(--air-teal);
+}
+.app-shell .home-links svg:last-child {
+  margin-left: auto;
+}
+.app-shell .mobile-welcome,
+.app-shell .work-welcome {
+  padding: 24px;
+}
+.app-shell .mobile-welcome h1,
+.app-shell .work-welcome h1 {
+  font-size: 30px;
+  max-width: 75%;
+  margin-bottom: 12px;
+}
+.app-shell .mobile-welcome p:not(.mobile-greeting) {
+  max-width: 60%;
+  margin-bottom: 20px;
+  color: #d9e2ec;
+}
+.app-shell .mobile-welcome .role-chip {
+  color: #d6eeed;
+  border-color: #6c94a6;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+.app-shell .mobile-welcome .login-flight {
+  position: absolute;
+  width: 220px;
+  max-width: none;
+  right: -50px;
+  top: 60px;
+  margin: 0;
+  opacity: 1;
+  color: #a7dadd;
+}
+.app-shell .mobile-welcome .login-flight g {
+  stroke: #102a43;
+}
+.app-shell .mobile-welcome .login-flight g path:first-child {
+  fill: none;
+}
+.app-shell .mobile-welcome .button {
+  position: relative;
+  min-height: 48px;
+  max-width: 100%;
+}
+.app-shell .mobile-section-heading {
+  margin: 24px 0 12px;
+  align-items: center;
+}
+.app-shell .mobile-section-heading h2 {
+  font-size: 19px;
+}
+.app-shell .overview-counts {
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.app-shell .overview-counts article {
+  position: relative;
+  padding: 20px;
+  border-top: 3px solid var(--air-teal);
+  margin: 0;
+}
+.app-shell .overview-counts article > svg {
+  position: absolute;
+  right: 16px;
+  top: 20px;
+  color: var(--air-teal);
+}
+.app-shell .overview-counts strong {
+  font-size: 36px;
+  color: var(--air-navy);
+  letter-spacing: -1px;
+}
+.app-shell .overview-counts span {
+  font-size: 13px;
+  color: var(--air-secondary);
+}
+.app-shell .home-attention {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #ead6ab;
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 16px;
+  background: #fffaf0;
+  color: #704500;
+}
+.app-shell .home-attention > span {
+  flex: 1;
+}
+.app-shell .home-attention span span {
+  display: block;
+  font-size: 13px;
+}
+.app-shell .home-attention svg {
+  flex-shrink: 0;
+}
+.app-shell .overview-mission,
+.app-shell .mobile-record {
+  padding: 20px;
+  transition:
+    border-color 180ms,
+    background-color 180ms,
+    box-shadow 180ms;
+}
+.app-shell .overview-mission:hover,
+.app-shell .mobile-shortcut:hover {
+  border-color: var(--air-teal);
+  box-shadow: 0 5px 18px #102a430d;
+}
+.app-shell .overview-mission > strong {
+  font-size: 16px;
+}
+.app-shell .record-reference {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.3px;
+}
+.app-shell .record-open {
+  display: block;
+  border-top: 1px solid var(--air-border);
+  padding-top: 12px;
+  margin-top: 8px;
+  color: var(--air-teal-hover);
+}
+.app-shell .mobile-record > div:first-child {
+  align-items: start;
+  gap: 12px;
+}
+.app-shell .mobile-record[data-selected="true"] {
+  border: 2px solid var(--air-teal);
+  border-left-width: 5px;
+  background: var(--air-soft);
+}
+.app-shell .mobile-record button[aria-expanded="true"] {
+  background: var(--air-teal);
+  color: white;
+}
+.app-shell .record-route {
+  border-left: 2px solid #99c7cb;
+  padding-left: 12px;
+  margin: 8px 0;
+}
+.app-shell .mobile-shortcut {
+  padding: 20px;
+  display: grid;
+  gap: 8px;
+}
+.app-shell .mobile-shortcut > svg {
+  padding: 10px;
+  width: 44px;
+  height: 44px;
+  background: var(--air-soft);
+  border-radius: 14px;
+  color: var(--air-teal-hover);
+}
+.app-shell .mobile-shortcut strong {
+  font-size: 15px;
+}
+.app-shell .mobile-shortcut small {
+  font-size: 13px;
+}
+.app-shell .scenario-entry {
+  background: transparent;
+  border-style: dashed;
+}
+/* One login design for desktop and mobile; role selection remains native radios. */
+.app-shell .demo-login {
+  --login-secondary: var(--air-secondary);
+  gap: 24px;
+}
+.app-shell .login-intro {
+  padding: 24px;
+  border-radius: 22px;
+  background: var(--air-navy);
+  color: white;
+  overflow: hidden;
+}
+.app-shell .login-brand strong {
+  color: white;
+}
+.app-shell .login-brand strong span,
+.app-shell .login-brand p {
+  color: #a7dadd;
+}
+.app-shell .login-brand .brand-mark {
+  width: 52px;
+  height: 52px;
+}
+.app-shell .login-meta {
+  margin: 20px 0 24px;
+}
+.app-shell .login-device,
+.app-shell .login-device-note {
+  color: #c4d9e2;
+}
+.app-shell .login-demo-badge {
+  background: #e7f5f4;
+  color: var(--air-teal-hover);
+  border-radius: 20px;
+}
+.app-shell .login-kicker {
+  color: #a7dadd;
+  font-size: 10px;
+  letter-spacing: 1.4px;
+}
+.app-shell .login-intro h1 {
+  color: white;
+  font-size: 30px;
+  line-height: 1.15;
+  margin: 0 0 16px;
+}
+.app-shell .login-intro-copy > p:not(.login-kicker) {
+  color: #d9e2ec;
+  font-size: 15px;
+}
+.app-shell .login-flight {
+  max-width: 520px;
+  color: #a7dadd;
+  margin: 0 auto;
+}
+.app-shell .login-device-note {
+  font-size: 12px;
+}
+.app-shell .login-panel {
+  padding: 24px;
+}
+.app-shell .login-roles legend {
+  font-size: 20px;
+}
+.app-shell .login-role {
+  border-radius: 14px;
+  padding: 12px;
+  min-height: 82px;
+}
+.app-shell .login-role:has(input:checked) {
+  border: 2px solid var(--air-teal);
+  padding: 11px;
+  background: var(--air-soft);
+  box-shadow: 0 0 0 3px #087f8c0a;
+}
+.app-shell .login-role input {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+  margin: 0;
+  grid-column: 3;
+  grid-row: 1;
+}
+.app-shell .login-role-icon {
+  background: #f0f6f9;
+  width: 32px;
+  height: 38px;
+  align-items: center;
+  border-radius: 10px;
+}
+.app-shell .login-role-copy > span {
+  font-size: 13px;
+}
+.app-shell .login-enter {
+  margin-top: 24px;
+  min-height: 52px;
+}
+/* Forms: distinct sections and a clear primary action without sticky obstruction. */
+.app-shell .request-page {
+  max-width: 1040px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.app-shell .form-section {
+  padding: 24px 0;
+  border: 0;
+  border-top: 1px solid var(--air-border);
+  margin: 24px 0 0;
+}
+.app-shell .form-section legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  color: var(--air-navy);
+  font-weight: 700;
+  padding: 0 12px 0 0;
+}
+.app-shell .form-section legend svg {
+  color: var(--air-teal);
+}
+.app-shell .form-section .grid {
+  gap: 16px 24px;
+  margin-bottom: 0;
+}
+.app-shell .form-section .grid label {
+  margin-bottom: 0;
+}
+.app-shell .submission-review {
+  background: var(--air-soft);
+  border: 1px solid #bfdedc;
+  padding: 20px;
+  border-radius: 18px;
+}
+.app-shell .request-page form > .actions {
+  background: var(--air-bg);
+  border-radius: 16px;
+  padding: 16px;
+}
+.app-shell .request-page form > .actions > button.tertiary {
+  flex-basis: auto;
+}
+.app-shell .field-error {
+  color: var(--air-danger);
+  font-size: 13px;
+}
+.app-shell [aria-invalid="true"] {
+  border-color: var(--air-danger);
+}
+.app-shell .selected-request {
+  border-left: 4px solid var(--air-teal);
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--air-soft);
+}
+.app-shell .workflow-summary {
+  border: 1px solid var(--air-border);
+  border-radius: 18px;
+  background: var(--air-bg);
+  padding: 20px;
+}
+.app-shell details {
+  border-color: var(--air-border);
+}
+.app-shell summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.app-shell summary::before {
+  content: "+";
+  font-size: 19px;
+  color: var(--air-teal);
+  margin-right: 4px;
+}
+.app-shell details[open] > summary::before {
+  content: "−";
+}
+.app-shell .timeline > div {
+  border-left: 2px solid #bfdedc;
+  padding-left: 20px;
+}
+/* Peta tetap Leaflet/OpenStreetMap; marker terpilih berbeda bentuk dan label. */
+.app-shell .air-map-card {
+  padding: 20px;
+}
+.app-shell .aircraft-map,
+.app-shell .map {
+  border: 1px solid var(--air-border);
+  border-radius: 16px;
+  background: #e5edf2;
+}
+.app-shell .aircraft-map {
+  height: 440px;
+}
+.app-shell .air-map-heading {
+  align-items: start;
+  gap: 12px;
+}
+.app-shell .air-map-heading h2 {
+  font-size: 20px;
+}
+.app-shell .air-map-card .actions {
+  gap: 8px;
+}
+.app-shell .aircraft-detail-panel {
+  padding: 16px;
+}
+.app-shell .aircraft-card {
+  border-radius: 16px;
+  box-shadow: none;
+  padding: 16px;
+}
+.app-shell .aircraft-card.selected {
+  border: 2px solid var(--air-teal);
+  border-left-width: 5px;
+  background: var(--air-soft);
+}
+.app-shell .aircraft-card h2 {
+  font-size: 18px;
+}
+.app-shell .air-report {
+  padding: 20px 20px 20px 28px;
+  border-left: 3px solid #b9d6df;
+  border-radius: 0 16px 16px 0;
+  background: var(--air-bg);
+  margin-bottom: 12px;
+  position: relative;
+}
+.app-shell .air-report::before {
+  content: "";
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: var(--air-teal);
+  left: -7px;
+  top: 26px;
+}
+.app-shell .leaflet-control-zoom a {
+  min-width: 44px;
+  min-height: 44px;
+  line-height: 44px;
+  color: var(--air-navy);
+}
+.app-shell .aircraft-map-icon.is-selected svg {
+  outline: 3px solid var(--air-teal);
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+.app-shell .map-legend {
+  display: flex;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 12px;
+  color: var(--air-secondary);
+  margin: 12px 0;
+}
+.app-shell .map-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.app-shell .map-legend i {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border-radius: 50%;
+  background: var(--air-navy);
+}
+.app-shell .map-legend i.selected {
+  outline: 2px solid var(--air-teal);
+  outline-offset: 2px;
+}
+/* Leadership: four data-backed KPIs, quiet charts and readable period controls. */
+.app-shell .leadership-metrics {
+  gap: 12px;
+}
+.app-shell .leadership-metrics .card {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  position: relative;
+  padding: 20px;
+  border-top: 3px solid var(--air-teal);
+}
+.app-shell .leadership-metrics .card > svg {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 18px;
+  color: var(--air-teal);
+}
+.app-shell .leadership-metrics strong {
+  font-size: 36px;
+  color: var(--air-navy);
+  margin: 16px 0 4px;
+  line-height: 1.2;
+}
+.app-shell .leadership-metrics span {
+  font-size: 13px;
+  color: var(--air-secondary);
+}
+.app-shell .leadership-hero {
+  background: var(--air-soft);
+  color: var(--air-navy);
+  border: 1px solid #bfdedc;
+  border-radius: 20px;
+  padding: 24px;
+}
+.app-shell .leadership-hero p {
+  color: var(--air-secondary);
+}
+.app-shell .leadership-hero-top {
+  color: var(--air-teal-hover);
+}
+.app-shell .leadership-hero-foot > a {
+  background: var(--air-teal);
+  color: white;
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+.app-shell .leadership-track {
+  background: #e8eff4;
+  border-radius: 8px;
+  height: 8px;
+}
+.app-shell .leadership-track > span,
+.app-shell .leadership-bar-slot > span.has-value {
+  background: var(--air-teal);
+}
+.app-shell .leadership-bars {
+  border-bottom: 1px solid var(--air-border);
+}
+.app-shell .leadership-identity {
+  margin: 20px 0;
+}
+.app-shell .bottom-navigation {
+  border-color: var(--air-border);
+  background: white;
+  box-shadow: 0 -4px 24px #102a4308;
+}
+.app-shell .bottom-link {
+  min-height: 52px;
+  color: var(--air-secondary);
+  font-size: 11px;
+}
+.app-shell .bottom-link.active {
+  color: var(--air-teal-hover);
+}
+.app-shell .bottom-link.active .bottom-icon {
+  background: var(--air-soft);
+  color: var(--air-teal-hover);
+}
+.app-shell th {
+  background: var(--air-bg);
+  color: var(--air-secondary);
+  font-size: 12px;
+}
+.app-shell td {
+  font-size: 14px;
+}
+.app-shell .pagination {
+  gap: 8px;
+}
+.app-shell .pagination select {
+  font-size: 16px;
+}
+.app-shell footer {
+  color: var(--air-secondary);
+}
+@media (min-width: 700px) {
+  .app-shell .demo-login {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: 24px;
+    align-items: stretch;
+  }
+  .app-shell .login-intro {
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-shell .login-intro h1 {
+    font-size: 38px;
+  }
+  .app-shell .login-intro-copy {
+    margin-top: 56px;
+  }
+  .app-shell .login-device-note {
+    margin-top: auto;
+  }
+  .app-shell .login-panel {
+    padding: 28px;
+  }
+  .app-shell .mobile-welcome {
+    min-height: 240px;
+    padding: 28px 32px;
+  }
+  .app-shell .mobile-welcome h1 {
+    max-width: 60%;
+    font-size: 32px;
+  }
+  .app-shell .mobile-welcome .login-flight {
+    width: 320px;
+    top: 36px;
+    right: -24px;
+  }
+  .app-shell .mobile-welcome p:not(.mobile-greeting) {
+    max-width: 55%;
+  }
+  .app-shell .home-links a {
+    font-size: 14px;
+  }
+}
+@media (min-width: 1100px) {
+  .app-shell.coordination-app > main {
+    padding: 0;
+  }
+  .app-shell.coordination-app.demo-login-app > main {
+    width: 100%;
+    max-width: 1240px;
+    margin: 0 auto;
+  }
+  .app-shell.demo-login-app .demo-login-shell {
+    padding: 40px 32px 110px;
+  }
+  .app-shell.demo-login-app .bottom-navigation {
+    display: none;
+  }
+  .app-shell .login-role-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .app-shell .login-role {
+    grid-template-columns: 28px minmax(0, 1fr) 20px;
+    min-height: 110px;
+  }
+  .app-shell .login-intro h1 {
+    font-size: 44px;
+  }
+  .app-shell .login-intro .login-flight {
+    margin: 24px 0;
+  }
+  .app-shell.coordination-app .bottom-navigation {
+    background: var(--air-navy-dark);
+    border: 0;
+    border-radius: 20px;
+    padding: 20px 12px;
+    top: 64px;
+    bottom: 24px;
+  }
+  .app-shell.coordination-app .bottom-navigation::before {
+    content: "COLIBRI / AIR MEDICAL";
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: #a7dadd;
+    padding: 12px 12px 24px;
+  }
+  .app-shell.coordination-app .bottom-navigation::after {
+    content: "DATA SINTETIS · SIMULASI";
+    color: #a7dadd;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 24px 12px 8px;
+    margin-top: auto;
+  }
+  .app-shell.coordination-app .bottom-link {
+    color: #d9e2ec;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+  .app-shell.coordination-app .bottom-link.active {
+    background: var(--air-soft);
+    color: var(--air-teal-hover);
+  }
+  .app-shell .workspace:not(.compact-workspace) > aside {
+    background: var(--air-navy-dark);
+    border-radius: 20px;
+    padding: 24px 16px;
+    color: white;
+    align-self: start;
+    position: sticky;
+    top: 24px;
+  }
+  .app-shell .workspace aside .eyebrow,
+  .app-shell .workspace aside small {
+    color: #a7dadd;
+  }
+  .app-shell .workspace aside nav a {
+    color: #d9e2ec;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .app-shell .workspace aside nav a.active {
+    background: var(--air-soft);
+    color: var(--air-teal-hover);
+  }
+  .app-shell .overview-missions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .app-shell .air-monitor-layout {
+    grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
+    gap: 20px;
+  }
+  .app-shell .mobile-welcome .login-flight {
+    width: 370px;
+    right: -8px;
+    top: 10px;
+  }
+  .app-shell .mobile-welcome p:not(.mobile-greeting) {
+    max-width: 50%;
+  }
+}
+@media (max-width: 699px) {
+  .app-shell main {
+    padding: 20px;
+  }
+  .app-shell.mobile-app > main {
+    padding: 0;
+  }
+  .app-shell .card {
+    padding: 20px;
+  }
+  .app-shell .page-heading,
+  .app-shell .leadership-heading {
+    padding: 20px;
+    flex-wrap: wrap;
+  }
+  .app-shell .page-heading > div {
+    flex: 1 1 180px;
+  }
+  .app-shell .page-heading h1,
+  .app-shell .leadership-heading h1 {
+    font-size: 26px;
+  }
+  .app-shell .air-home-hero {
+    grid-template-columns: 1fr;
+    padding: 24px;
+    gap: 0;
+  }
+  .app-shell .air-home-hero .login-flight {
+    max-width: 280px;
+    margin: -16px 0 -12px auto;
+  }
+  .app-shell .home-links {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .app-shell .home-links a {
+    padding: 16px;
+  }
+  .app-shell .mobile-welcome h1,
+  .app-shell .work-welcome h1 {
+    font-size: 28px;
+    max-width: 80%;
+  }
+  .app-shell .mobile-welcome .mobile-greeting {
+    font-size: 12px;
+  }
+  .app-shell .mobile-welcome p:not(.mobile-greeting) {
+    font-size: 13px;
+    max-width: 66%;
+  }
+  .app-shell .mobile-welcome .login-flight {
+    width: 190px;
+    top: 80px;
+    right: -68px;
+  }
+  .app-shell .mobile-welcome .button {
+    font-size: 14px;
+  }
+  .app-shell .login-intro {
+    padding: 24px 20px 16px;
+  }
+  .app-shell .login-meta {
+    margin: 16px 0 20px;
+  }
+  .app-shell .login-intro-copy .login-flight {
+    max-width: 250px;
+    margin: -4px auto -8px;
+  }
+  .app-shell .login-device-note {
+    font-size: 11px;
+  }
+  .app-shell .login-panel {
+    padding: 20px 16px;
+  }
+  .app-shell .login-intro h1 {
+    font-size: 30px;
+  }
+  .app-shell .login-role {
+    min-height: 82px;
+  }
+  .app-shell .aircraft-map {
+    height: 320px;
+  }
+  .app-shell .air-map-card {
+    padding: 16px;
+  }
+  .app-shell .air-map-heading {
+    flex-wrap: wrap;
+  }
+  .app-shell .air-map-heading .badge {
+    font-size: 11px;
+  }
+  .app-shell .form-section {
+    padding-top: 20px;
+  }
+  .app-shell .form-section legend {
+    font-size: 18px;
+  }
+  .app-shell .overview-counts article {
+    padding: 16px;
+  }
+  .app-shell .overview-counts article > svg {
+    width: 18px;
+    right: 12px;
+    top: 16px;
+  }
+  .app-shell .overview-counts strong {
+    font-size: 32px;
+  }
+  .app-shell .overview-missions {
+    grid-template-columns: 1fr;
+  }
+  .app-shell .mobile-shortcuts {
+    gap: 12px;
+  }
+  .app-shell .mobile-shortcut {
+    padding: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell *,
+  .app-shell *::before,
+  .app-shell *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+.app-shell .sidebar-brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 750;
+  margin-bottom: 32px;
+}
+.app-shell .sidebar-brand small {
+  display: block;
+  color: #a7dadd;
+  font-size: 11px;
+  font-weight: 400;
+}
+.app-shell .sidebar-brand .brand-mark {
+  width: 38px;
+  height: 38px;
+}
+.app-shell .sidebar-role {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+  border-top: 1px solid #ffffff26;
+  font-size: 13px;
+}
+.app-shell .record-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--air-teal-hover);
+  font-weight: 700;
+}
+@media (max-width: 1099px) {
+  .app-shell .sidebar-brand,
+  .app-shell .sidebar-role {
+    display: none;
+  }
+}
+/* Final contrast and compact composition checks against rendered surfaces. */
+.app-shell .leadership-hero-top > span:first-child,
+.app-shell .leadership-hero-top > span:last-child,
+.app-shell .leadership-hero-foot > span {
+  color: var(--air-teal-hover);
+}
+.app-shell .leadership-hero-top > span:last-child {
+  border-color: #9cbfc1;
+}
+.app-shell .leadership-hero-foot {
+  border-color: #bfdedc;
+}
+.app-shell .login-flight g > path:first-child,
+.app-shell .login-flight g > path:nth-child(9) {
+  stroke: #80aebc;
+}
+.app-shell .leadership-content {
+  row-gap: 16px;
+}
+.app-shell
+  .leadership-content
+  > :is(
+    .leadership-heading,
+    .leadership-filters,
+    .leadership-scope,
+    .leadership-freshness
+  ) {
+  margin-bottom: 0;
+}
+@media (max-width: 699px) {
+  .app-shell .mobile-welcome {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 104px;
+    gap: 0 8px;
+    grid-template-areas: "eyebrow eyebrow" "greeting greeting" "role role" "title title" "description art" "action action";
+  }
+  .app-shell .mobile-welcome .eyebrow {
+    grid-area: eyebrow;
+  }
+  .app-shell .mobile-welcome .mobile-greeting {
+    grid-area: greeting;
+  }
+  .app-shell .mobile-welcome .role-chip {
+    grid-area: role;
+    justify-self: start;
+  }
+  .app-shell .mobile-welcome h1 {
+    grid-area: title;
+    max-width: 100%;
+  }
+  .app-shell .mobile-welcome p:not(.mobile-greeting) {
+    grid-area: description;
+    max-width: 100%;
+  }
+  .app-shell .mobile-welcome .login-flight {
+    grid-area: art;
+    position: static;
+    width: 125px;
+    max-width: none;
+    margin: 0 0 0 -8px;
+    align-self: start;
+  }
+  .app-shell .mobile-welcome .button {
+    grid-area: action;
+  }
+}
+@media (min-width: 1100px) {
+  .app-shell
+    .workspace:not(.compact-workspace)
+    .workspace-content:has(.request-list-panel) {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.15fr);
+    gap: 20px;
+    align-items: start;
+  }
+  .app-shell .workspace-content:has(.request-list-panel) > * {
+    grid-column: 1 / -1;
+  }
+  .app-shell .workspace-content:has(.request-list-panel) > .request-list-panel {
+    grid-column: 1;
+    padding: 16px;
+  }
+  .app-shell .workspace-content:has(.request-list-panel) > #request-workspace {
+    grid-column: 2;
+    padding: 20px;
+  }
+  .app-shell .workspace-content:has(.request-list-panel) .mobile-record-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-shell .workspace-content:has(.request-list-panel) .pagination {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .app-shell .workspace-content:has(.request-list-panel) .pagination label {
+    width: 100%;
+  }
+}
+.app-shell .mobile-welcome .login-flight {
+  display: block;
+}
+@media (min-width: 700px) and (max-width: 1099px) {
+  .app-shell .mobile-welcome {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 200px;
+    gap: 0 16px;
+    grid-template-areas: "eyebrow eyebrow" "greeting greeting" "role role" "title title" "description art" "action action";
+  }
+  .app-shell .mobile-welcome .eyebrow {
+    grid-area: eyebrow;
+  }
+  .app-shell .mobile-welcome .mobile-greeting {
+    grid-area: greeting;
+  }
+  .app-shell .mobile-welcome .role-chip {
+    grid-area: role;
+    justify-self: start;
+  }
+  .app-shell .mobile-welcome h1 {
+    grid-area: title;
+    max-width: 100%;
+  }
+  .app-shell .mobile-welcome p:not(.mobile-greeting) {
+    grid-area: description;
+    max-width: 100%;
+  }
+  .app-shell .mobile-welcome .login-flight {
+    grid-area: art;
+    position: static;
+    width: 200px;
+    margin: -12px 0 0;
+  }
+  .app-shell .mobile-welcome .button {
+    grid-area: action;
+    justify-self: start;
+  }
+}
+.app-shell .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  line-height: 1.45;
+}
+.app-shell .status-badge svg {
+  flex-shrink: 0;
+}
+.app-shell .mobile-record > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+}
+.app-shell .mobile-record > div:first-child > strong {
+  flex: 1 1 150px;
+  font-size: 16px;
+}

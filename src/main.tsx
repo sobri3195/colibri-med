@@ -33,6 +33,7 @@ import {
 import "./styles.css";
 import "./mobile-experience.css";
 import "./coordination-polish.css";
+import "./air-medical.css";
 function App() {
   const [initialDemo] = useState(() =>
     mode === "demo" ? readDemoSession() : null,

@@ -1,8 +1,18 @@
+import FlightAccent from "../components/FlightAccent";
+import { FormSection } from "../components/DesignSystem";
 import { useDraftRestore } from "../features/useDraftRestore";
 import { displayStatus } from "../lib/presentation";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plane, ShieldCheck, ClipboardList } from "lucide-react";
+import {
+  ArrowRight,
+  Plane,
+  ShieldCheck,
+  ClipboardList,
+  Hospital,
+  MapPin,
+  HeartPulse,
+} from "lucide-react";
 import LocationMap from "../components/LocationMap";
 import { requestSchema } from "../lib/domain";
 import { submit, retry, mode, outboxOwner } from "../services/api";
@@ -25,40 +35,53 @@ export function Home({
 }) {
   return (
     <>
-      <section className="hero">
-        <div className="eyebrow">KOORDINASI • KESIAPAN • KEPEDULIAN</div>
-        <h1>
-          Menghubungkan tim.
-          <br />
-          <span>Mendekatkan pertolongan.</span>
-        </h1>
-        <p>Sistem Koordinasi Helikopter Dokter dan Evakuasi Medis Udara</p>
-        <p className="muted">
-          Ruang simulasi koordinasi: dari permohonan bantuan, penilaian petugas,
-          hingga serah terima pasien.
-        </p>
-        <div className="actions">
-          <Link className="button" to="/permohonan">
-            Buat permohonan simulasi <ArrowRight size={18} />
+      <section className="hero air-home-hero">
+        <div className="hero-copy">
+          <div className="eyebrow">COLIBRI AIR MEDICAL</div>
+          <p className="hero-greeting">
+            {actor
+              ? `Selamat datang, ${actor.name} · ${actor.role}`
+              : "Ruang koordinasi medis udara"}
+          </p>
+          <h1>Koordinasi medis udara</h1>
+          <p>
+            Hubungkan permohonan, kesiapan tim, dan setiap tahap misi dalam satu
+            ruang kerja.
+          </p>
+          <Link
+            className="button"
+            to={
+              actor
+                ? actor.role === "Viewer pimpinan"
+                  ? "/pimpinan"
+                  : "/internal/permohonan"
+                : "/permohonan"
+            }
+          >
+            {actor ? "Buka ruang koordinasi" : "Buat permohonan simulasi"}{" "}
+            <ArrowRight size={18} />
           </Link>
-          <Link className="button secondary" to="/login">
-            Masuk ruang koordinasi
-          </Link>
-          <Link className="button secondary" to="/mobile">
-            Versi mobile
-          </Link>
-          <Link className="button secondary" to="/pimpinan">
-            Pengawasan pimpinan
-          </Link>
+          <small>Data sintetis · Bukan layanan darurat resmi</small>
         </div>
-        <img
-          className="hero-icon"
-          src="/branding/colibri-med-logo-512.png"
-          width="256"
-          height="256"
-          alt="Lambang COLIBRI MED: helikopter, perisai biru-hijau, sayap emas, dan tongkat medis"
-        />
+        <FlightAccent />
       </section>
+      <nav className="home-links" aria-label="Akses cepat beranda">
+        <Link to="/login">
+          <ClipboardList size={20} />
+          Masuk ruang koordinasi
+          <ArrowRight size={16} />
+        </Link>
+        <Link to="/mobile">
+          <Plane size={20} />
+          Versi mobile
+          <ArrowRight size={16} />
+        </Link>
+        <Link to="/pimpinan">
+          <ShieldCheck size={20} />
+          Pengawasan pimpinan
+          <ArrowRight size={16} />
+        </Link>
+      </nav>
       <section className="card index-admin">
         <div>
           <span className="eyebrow">AKSES ADMINISTRATOR</span>
@@ -305,6 +328,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
         {[
           {
             title: "Identitas & fasilitas",
+            icon: Hospital,
             fields: [
               ["name", "Nama pemohon sintetis"],
               ["contact", "Kontak contoh"],
@@ -314,6 +338,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
           },
           {
             title: "Lokasi & akses",
+            icon: MapPin,
             fields: [
               ["location", "Deskripsi lokasi"],
               ["access", "Informasi akses"],
@@ -321,9 +346,8 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
               ["lng", "Bujur (opsional)"],
             ],
           },
-        ].map(({ title, fields }) => (
-          <fieldset className="form-section" key={title}>
-            <legend>{title}</legend>
+        ].map(({ title, fields, icon }) => (
+          <FormSection title={title} icon={icon} key={title}>
             <div className="grid two">
               {fields.map(([key, label]) => (
                 <label key={key}>
@@ -398,10 +422,9 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
                 </label>
               ))}
             </div>
-          </fieldset>
+          </FormSection>
         ))}
-        <fieldset className="form-section">
-          <legend>Kebutuhan medis</legend>
+        <FormSection title="Kebutuhan medis" icon={HeartPulse}>
           <label>
             <span>
               Ringkasan kebutuhan <span aria-hidden="true">*</span>
@@ -428,9 +451,8 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
               </span>
             )}
           </label>
-        </fieldset>
-        <fieldset className="form-section">
-          <legend>Penanda lokasi simulasi</legend>
+        </FormSection>
+        <FormSection title="Penanda lokasi simulasi" icon={MapPin}>
           <p className="form-help">
             Pilih titik atau isi koordinat manual. Lokasi perangkat memerlukan
             izin Anda.
@@ -464,7 +486,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
           >
             Gunakan Lokasi Saya
           </button>
-        </fieldset>
+        </FormSection>
         <section
           className="submission-review"
           aria-label="Pemeriksaan sebelum pengiriman"

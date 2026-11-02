@@ -1,3 +1,4 @@
+import { NavigationLink } from "../components/DesignSystem";
 import { useNavigationClearance } from "../features/useNavigationClearance";
 import { useEffect } from "react";
 import {
@@ -165,17 +166,13 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
                       pathname !== "/mobile/operasi/permohonan")
                   : pathname === path || pathname.startsWith(path + "/");
           return (
-            <Link
+            <NavigationLink
               key={path}
               to={path + context}
-              className={active ? "bottom-link active" : "bottom-link"}
-              aria-current={active ? "page" : undefined}
-            >
-              <span className="bottom-icon">
-                <Icon size={22} aria-hidden="true" />
-              </span>
-              <span>{label}</span>
-            </Link>
+              active={active}
+              label={label}
+              icon={Icon}
+            />
           );
         })}
       </nav>
@@ -204,24 +201,10 @@ export function MobileHome({ actor }: { actor: Actor | null }) {
             : "Selamat datang di COLIBRI MED"}
         </p>
         {actor && <span className="role-chip">{actor.role}</span>}
-        <h1>
-          {actor ? (
-            viewer ? (
-              "Ringkasan pengawasan"
-            ) : (
-              "Ruang kerja koordinasi"
-            )
-          ) : (
-            <>
-              Koordinasi dalam
-              <br />
-              <span>genggaman.</span>
-            </>
-          )}
-        </h1>
+        <h1>Koordinasi medis udara</h1>
         <p>
           {actor
-            ? "Tinjau pekerjaan dan lanjutkan koordinasi sesuai peran Anda."
+            ? "Permohonan, kesiapan tim, dan misi dalam satu ruang kerja."
             : "Sistem Koordinasi Helikopter Dokter dan Evakuasi Medis Udara"}
         </p>
         <FlightAccent />

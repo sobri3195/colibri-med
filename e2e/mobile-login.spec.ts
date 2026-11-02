@@ -36,16 +36,20 @@ for (const [width, height] of [
       window.scrollTo(0, document.documentElement.scrollHeight),
     );
     const footerBox = await footer.boundingBox();
-    const navBox = await page
-      .getByRole("navigation", { name: "Navigasi bawah" })
-      .boundingBox();
-    if (width >= 1100)
-      expect(footerBox!.x).toBeGreaterThanOrEqual(navBox!.x + navBox!.width);
-    else
+    const nav = page.getByRole("navigation", { name: "Navigasi bawah" });
+    if (width >= 1100) {
+      await expect(nav).toBeHidden();
+      const intro = await page.locator(".login-intro").boundingBox();
+      const panel = await page.locator(".login-panel").boundingBox();
+      expect(panel!.x).toBeGreaterThanOrEqual(intro!.x + intro!.width);
+      expect(footerBox!.x).toBeGreaterThanOrEqual(0);
+    } else {
+      const navBox = await nav.boundingBox();
       expect(footerBox!.y + footerBox!.height).toBeLessThanOrEqual(navBox!.y);
-    await expect(
-      page.getByRole("link", { name: "Akun", exact: true }),
-    ).toHaveAttribute("aria-current", "page");
+      await expect(
+        nav.getByRole("link", { name: "Akun", exact: true }),
+      ).toHaveAttribute("aria-current", "page");
+    }
   });
 }
 

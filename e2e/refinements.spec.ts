@@ -2,8 +2,10 @@ import { test, expect, type Page } from "@playwright/test";
 async function login(page: Page) {
   await page.route("**/tile.openstreetmap.org/**", (r) => r.abort());
   await page.goto("/login");
-  await page.getByLabel("Peran demo").selectOption("Administrator");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page
+    .getByRole("radio", { name: "Administrator", exact: false })
+    .check();
+  await page.getByRole("button", { name: /^Masuk sebagai/ }).click();
   await expect(
     page.getByRole("heading", { name: "Ringkasan koordinasi" }),
   ).toBeVisible();

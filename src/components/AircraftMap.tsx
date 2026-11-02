@@ -75,6 +75,13 @@ export default function AircraftMap({
       }
       marker.setLatLng([a.lat, a.lng]);
       marker.setZIndexOffset(a.id === selected ? 1000 : 0);
+      marker.getElement()?.classList.toggle("is-selected", a.id === selected);
+      marker
+        .getElement()
+        ?.setAttribute(
+          "aria-label",
+          a.name + (a.id === selected ? " — dipilih" : "") + " — simulasi",
+        );
       marker.bindPopup(
         Object.assign(document.createElement("span"), {
           textContent:
@@ -105,6 +112,17 @@ export default function AircraftMap({
         ref={element}
         aria-label="Peta helikopter simulasi"
       />
+      <div className="map-legend" aria-label="Legenda peta">
+        <span>
+          <i aria-hidden="true" />
+          Posisi laporan
+        </span>
+        <span>
+          <i className="selected" aria-hidden="true" />
+          Helikopter dipilih
+        </span>
+        {playback && <span>Garis putus-putus: ilustrasi simulasi</span>}
+      </div>
       {failed && (
         <p role="status" className="notice">
           Tile peta tidak tersedia. Daftar koordinat, kontrol simulasi, dan

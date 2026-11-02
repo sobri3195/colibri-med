@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 test("polling pauses while hidden and UI session expires", async ({ page }) => {
   await page.clock.install();
   await page.goto("/login");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page.getByRole("button", { name: /^Masuk sebagai/ }).click();
   await expect(
     page.getByRole("heading", { name: "Ringkasan koordinasi" }),
   ).toBeVisible();
@@ -22,7 +22,7 @@ test("polling pauses while hidden and UI session expires", async ({ page }) => {
   await expect(updated).toHaveText(visible!);
   await page.clock.fastForward(3600001);
   await expect(
-    page.getByRole("heading", { name: "Login petugas" }),
+    page.getByRole("heading", { name: "Masuk ke ruang koordinasi" }),
   ).toBeVisible();
   await expect(page.getByRole("alert")).toContainText("Sesi kedaluwarsa");
 });
@@ -37,8 +37,10 @@ test("demo workflow through medical review, flight approval, mission, handover a
       .first(),
   ).toBeVisible();
   await page.getByRole("link", { name: "Masuk ruang koordinasi" }).click();
-  await page.getByLabel("Peran demo").selectOption("Administrator");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page
+    .getByRole("radio", { name: "Administrator", exact: false })
+    .check();
+  await page.getByRole("button", { name: /^Masuk sebagai/ }).click();
   await expect(
     page.getByRole("heading", { name: "Ringkasan koordinasi" }),
   ).toBeVisible();
@@ -160,7 +162,7 @@ test("mobile form, denied geolocation and unavailable tiles remain usable", asyn
 test("offline outbox retry and actor isolation", async ({ page, context }) => {
   await page.route("**/tile.openstreetmap.org/**", (r) => r.abort());
   await page.goto("/login");
-  await page.getByRole("button", { name: "Masuk", exact: true }).click();
+  await page.getByRole("button", { name: /^Masuk sebagai/ }).click();
   await expect(
     page.getByRole("heading", { name: "Ringkasan koordinasi" }),
   ).toBeVisible();
@@ -186,6 +188,6 @@ test("offline outbox retry and actor isolation", async ({ page, context }) => {
   await expect(page.getByText("Tidak ada operasi tertunda.")).toBeVisible();
   await page.getByRole("button", { name: "Keluar", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Login petugas" }),
+    page.getByRole("heading", { name: "Masuk ke ruang koordinasi" }),
   ).toBeVisible();
 });

@@ -1,3 +1,4 @@
+import { NavigationLink, DataCard } from "../components/DesignSystem";
 import { displayStatus } from "../lib/presentation";
 import { useNavigationClearance } from "../features/useNavigationClearance";
 import { EmptyState } from "../components/MobileUI";
@@ -301,17 +302,13 @@ export default function Leadership({
         aria-label="Navigasi pengawasan"
       >
         {navigation.map(({ key, label, icon: Icon }) => (
-          <Link
+          <NavigationLink
             key={key}
             to={"/pimpinan" + (key ? "/" + key : "") + location.search}
-            className={section === key ? "bottom-link active" : "bottom-link"}
-            aria-current={section === key ? "page" : undefined}
-          >
-            <span className="bottom-icon">
-              <Icon size={21} aria-hidden="true" />
-            </span>
-            <span>{label}</span>
-          </Link>
+            active={section === key}
+            label={label}
+            icon={Icon}
+          />
         ))}
       </nav>
       <p className="mobile-disclaimer">
@@ -488,11 +485,11 @@ function LeadershipDashboard({
                     index
                   ];
                   return (
-                    <article className="card" key={key}>
+                    <DataCard key={key}>
                       <Icon size={20} />
                       <strong>{data.totals[key]}</strong>
                       <span>{metricLabels[key]}</span>
-                    </article>
+                    </DataCard>
                   );
                 })}
               </div>
