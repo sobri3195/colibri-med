@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useDraftRestore } from "../useDraftRestore";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import type {
   AircraftView,
@@ -32,6 +33,8 @@ export default function AircraftReportForm({
   });
   const [snapshot, setSnapshot] = useState(aircraft);
   const [form, setForm] = useState(() => initial(aircraft));
+  const draftGuard = useDraftRestore(initial(aircraft));
+  const submitLock = useRef(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [queued, setQueued] = useState(false);
@@ -62,6 +65,8 @@ export default function AircraftReportForm({
       <form
         onSubmit={async (e) => {
           e.preventDefault();
+          if (submitLock.current || queued) return;
+          submitLock.current = true;
           setBusy(true);
           try {
             const result = await submit(actor, "aircraftReports.create", {
@@ -86,135 +91,142 @@ export default function AircraftReportForm({
               setMessage(
                 mode === "demo"
                   ? "Laporan awak tersimpan di perangkat."
-                  : "Laporan awak tercatat di server.",
+                  : "Laporan awak tersinkron ke server.",
               );
               await saved();
             }
           } catch (e) {
             setMessage(String(e));
           } finally {
+            submitLock.current = false;
             setBusy(false);
           }
         }}
       >
-        <label>
-          Referensi misi
-          <select
-            value={form.missionId}
-            onChange={(e) => setForm({ ...form, missionId: e.target.value })}
-          >
-            <option value="">Latihan tanpa misi</option>
-            {missions.map((m) => (
-              <option value={m.id} key={m.id}>
-                {m.id.slice(0, 8)} · {m.status}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="grid two">
+        <fieldset disabled={busy} className="saving-fields">
           <label>
-            Jenis laporan
+            Referensi misi
             <select
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              value={form.missionId}
+              onChange={(e) => setForm({ ...form, missionId: e.target.value })}
             >
-              {reportCategories.map((c) => (
-                <option key={c}>{c}</option>
+              <option value="">Latihan tanpa misi</option>
+              {missions.map((m) => (
+                <option value={m.id} key={m.id}>
+                  {m.id.slice(0, 8)} · {m.status}
+                </option>
               ))}
             </select>
           </label>
-          <label>
-            Status helikopter sintetis
-            <select
-              value={form.aircraftStatus}
-              onChange={(e) =>
-                setForm({ ...form, aircraftStatus: e.target.value })
-              }
-            >
-              {aircraftStatuses.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <label>
-          Catatan operasional awak
-          <textarea
-            required
-            minLength={3}
-            maxLength={1000}
-            value={form.text}
-            onChange={(e) => setForm({ ...form, text: e.target.value })}
-          />
-        </label>
-        <div className="grid two">
-          <label>
-            Lintang laporan (opsional)
-            <input
-              type="number"
-              step="any"
-              min={-90}
-              max={90}
-              value={form.lat}
-              onChange={(e) => setForm({ ...form, lat: e.target.value })}
-            />
-          </label>
-          <label>
-            Bujur laporan (opsional)
-            <input
-              type="number"
-              step="any"
-              min={-180}
-              max={180}
-              value={form.lng}
-              onChange={(e) => setForm({ ...form, lng: e.target.value })}
-            />
-          </label>
-        </div>
-        <small>
-          Koordinat wajib berpasangan. Jika kosong, laporan memakai posisi
-          tercatat sebelumnya; tidak dianggap pengamatan posisi baru.
-        </small>
-        <div className="actions">
-          <button disabled={busy || queued}>Kirim laporan awak</button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={async () => {
-              try {
-                await putLocal("drafts", key, { form, snapshot });
-                setMessage("Draft laporan tersimpan lokal.");
-              } catch {
-                setMessage("Draft belum dapat disimpan pada perangkat.");
-              }
-            }}
-          >
-            Simpan draft laporan
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={async () => {
-              try {
-                const draft = await getLocal("drafts", key);
-                if (!draft) {
-                  setMessage("Belum ada draft laporan.");
-                  return;
+          <div className="grid two">
+            <label>
+              Jenis laporan
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+              >
+                {reportCategories.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Status helikopter sintetis
+              <select
+                value={form.aircraftStatus}
+                onChange={(e) =>
+                  setForm({ ...form, aircraftStatus: e.target.value })
                 }
-                setForm(draft.form);
-                setSnapshot(draft.snapshot);
-                setMessage(
-                  "Draft laporan dimuat; tinjau revision sebelum mengirim.",
-                );
-              } catch {
-                setMessage("Draft laporan belum dapat dibaca.");
-              }
-            }}
-          >
-            Muat draft laporan
-          </button>
-        </div>
+              >
+                {aircraftStatuses.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label>
+            Catatan operasional awak
+            <textarea
+              required
+              minLength={3}
+              maxLength={1000}
+              value={form.text}
+              onChange={(e) => setForm({ ...form, text: e.target.value })}
+            />
+          </label>
+          <div className="grid two">
+            <label>
+              Lintang laporan (opsional)
+              <input
+                type="number"
+                step="any"
+                min={-90}
+                max={90}
+                value={form.lat}
+                onChange={(e) => setForm({ ...form, lat: e.target.value })}
+              />
+            </label>
+            <label>
+              Bujur laporan (opsional)
+              <input
+                type="number"
+                step="any"
+                min={-180}
+                max={180}
+                value={form.lng}
+                onChange={(e) => setForm({ ...form, lng: e.target.value })}
+              />
+            </label>
+          </div>
+          <small>
+            Koordinat wajib berpasangan. Jika kosong, laporan memakai posisi
+            tercatat sebelumnya; tidak dianggap pengamatan posisi baru.
+          </small>
+          <div className="actions">
+            <button disabled={busy || queued}>Kirim laporan awak</button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={async () => {
+                try {
+                  await putLocal("drafts", key, { form, snapshot });
+                  draftGuard.markSaved(form);
+                  setMessage("Draft laporan tersimpan lokal.");
+                } catch {
+                  setMessage("Draft belum dapat disimpan pada perangkat.");
+                }
+              }}
+            >
+              Simpan draft laporan
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={async () => {
+                try {
+                  const draft = await getLocal("drafts", key);
+                  if (!draft) {
+                    setMessage("Belum ada draft laporan.");
+                    return;
+                  }
+                  draftGuard.restore(form, draft.form, () => {
+                    setForm(draft.form);
+                    setSnapshot(draft.snapshot);
+                    setMessage(
+                      "Draft laporan dimuat; tinjau revision sebelum mengirim.",
+                    );
+                  });
+                } catch {
+                  setMessage("Draft laporan belum dapat dibaca.");
+                }
+              }}
+            >
+              Muat draft laporan
+            </button>
+          </div>
+        </fieldset>
       </form>
+      {draftGuard.confirmation}
       {message && (
         <p role="status" className="notice">
           {message}

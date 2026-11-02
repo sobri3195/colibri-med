@@ -1,4 +1,5 @@
-import { actionLabel, listDate } from "../lib/presentation";
+import { mode } from "../services/api";
+import { actionLabel, listDate, recordSourceLabel } from "../lib/presentation";
 import { useState } from "react";
 import type { RecordData } from "../types";
 import { EmptyState, StatusBadge } from "./MobileUI";
@@ -84,6 +85,7 @@ export default function RecordTable({
                     {listDate(r.updatedAt)}
                   </time>
                 </small>
+                <small>{recordSourceLabel(mode === "demo")}</small>
                 {r.text !== undefined && <p>{String(r.text)}</p>}
                 {r.location !== undefined && (
                   <p>Lokasi: {String(r.location)}</p>

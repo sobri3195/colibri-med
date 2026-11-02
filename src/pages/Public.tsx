@@ -1,5 +1,6 @@
+import { useDraftRestore } from "../features/useDraftRestore";
 import { displayStatus } from "../lib/presentation";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Plane, ShieldCheck, ClipboardList } from "lucide-react";
 import LocationMap from "../components/LocationMap";
@@ -169,6 +170,8 @@ const empty = {
 };
 export function RequestForm({ actor = null }: { actor?: Actor | null }) {
   const [form, setForm] = useState(empty);
+  const draftGuard = useDraftRestore(empty);
+  const submitLock = useRef(false);
   const [notice, setNotice] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -203,6 +206,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
         mode + ":" + (actor?.id ?? "public") + ":request",
         form,
       );
+      draftGuard.markSaved(form);
       setNotice("Tersimpan di perangkat — draft belum dikirim.");
     } catch {
       setNotice("Penyimpanan browser tidak tersedia.");
@@ -239,6 +243,8 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
         }}
         onSubmit={async (e) => {
           e.preventDefault();
+          if (submitLock.current || submitted) return;
+          submitLock.current = true;
           setBusy(true);
           setFieldErrors({});
           try {
@@ -251,7 +257,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
                 ? "Menunggu sinkronisasi — tersimpan di perangkat."
                 : (mode === "demo"
                     ? "Tersimpan di perangkat"
-                    : "Tercatat di server") +
+                    : "Tersinkron ke server") +
                     ". Belum diterima operator dan belum ada penugasan.",
             );
           } catch (e) {
@@ -291,6 +297,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
             }
             await refreshLocal().catch(() => {});
           } finally {
+            submitLock.current = false;
             setBusy(false);
           }
         }}
@@ -493,12 +500,15 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
             type="button"
             onClick={async () => {
               try {
-                setForm(
-                  (await getLocal(
-                    "drafts",
-                    mode + ":" + (actor?.id ?? "public") + ":request",
-                  )) ?? empty,
+                const draft = await getLocal(
+                  "drafts",
+                  mode + ":" + (actor?.id ?? "public") + ":request",
                 );
+                if (!draft) {
+                  setNotice("Belum ada draft untuk peran ini.");
+                  return;
+                }
+                draftGuard.restore(form, draft, () => setForm(draft));
               } catch {
                 setNotice("Draft tidak dapat dibuka.");
               }
@@ -508,12 +518,13 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
           </button>
         </div>
       </form>
+      {draftGuard.confirmation}
       <p
         role="status"
         className={
           notice
             ? "form-feedback " +
-              (/^(Tercatat|Tersimpan lokal)/.test(notice)
+              (/^(Tersinkron|Tersimpan di perangkat)/.test(notice)
                 ? "feedback-success"
                 : Object.values(fieldErrors).some(Boolean) ||
                     /Error:|[A-Z_]{3,}:/.test(notice)
@@ -622,7 +633,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
               <strong>
                 {mode === "demo"
                   ? "Tersimpan di perangkat"
-                  : "Tercatat di server"}
+                  : "Tersinkron ke server"}
               </strong>
               <small>
                 Referensi {r.id.slice(0, 8)} · {date(r.recordedAt)}

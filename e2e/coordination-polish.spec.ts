@@ -37,7 +37,7 @@ test("filtered selection remains explicit, can be reset, and detail can be close
   });
   await expect(status.locator('option[value=""]')).toHaveText("Semua status");
   await expect(
-    status.locator("option").filter({ hasText: "Tersimpan di perangkat" }),
+    status.locator("option").filter({ hasText: "Permohonan baru" }),
   ).toHaveCount(1);
   await page.getByRole("button", { name: "Reset filter", exact: true }).click();
   await expect(page.getByLabel("Cari data", { exact: true })).toHaveValue("");

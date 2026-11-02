@@ -1,16 +1,22 @@
+import { useState } from "react";
+import { transitionProblem } from "../lib/workflow";
 import type { RecordData } from "../types";
 import { missionStages } from "../lib/domain";
 export default function MissionControls({
   mission,
   busy,
   act,
+  tables,
 }: {
   mission: RecordData;
+  tables: Record<string, RecordData[]>;
   busy: boolean;
   act: (action: string, p: Record<string, unknown>) => Promise<any>;
 }) {
+  const [reason, setReason] = useState("");
   if (["Selesai", "Dibatalkan"].includes(mission.status)) return null;
   const next = missionStages[missionStages.indexOf(mission.status) + 1];
+  const problem = transitionProblem(tables, "missions", mission, next, reason);
   return (
     <>
       <form
@@ -26,9 +32,19 @@ export default function MissionControls({
       >
         <label>
           Alasan override penyelesaian (opsional)
-          <input name="reason" maxLength={500} />
+          <input
+            name="reason"
+            maxLength={500}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
         </label>
-        <button disabled={busy}>Misi → {next}</button>
+        {problem && (
+          <p role="status" className="notice">
+            {problem}
+          </p>
+        )}
+        <button disabled={busy || !!problem}>Misi → {next}</button>
       </form>
       {["Persiapan", "Tim Ditugaskan"].includes(mission.status) && (
         <details>

@@ -12,16 +12,20 @@ const actor = (): Actor => ({
   name: "Simulasi",
   role: "Operator",
 });
-const operation = (payload: Record<string, unknown> = {}): Operation => ({
-  operationId: crypto.randomUUID(),
-  entityId: crypto.randomUUID(),
-  baseRevision: 1,
-  createdAt: new Date().toISOString(),
-  status: "Menunggu jaringan",
-  retryCount: 0,
-  action: "requests.transition",
-  payload,
-});
+const operation = (payload: Record<string, unknown> = {}): Operation => {
+  const entityId = crypto.randomUUID();
+  const operationId = crypto.randomUUID();
+  return {
+    operationId,
+    entityId,
+    baseRevision: 1,
+    createdAt: new Date().toISOString(),
+    status: "Menunggu jaringan",
+    retryCount: 0,
+    action: "requests.transition",
+    payload: { id: entityId, operationId, baseRevision: 1, ...payload },
+  };
+};
 async function connected(a: Actor, results: any[] = []) {
   vi.stubEnv("VITE_APP_MODE", "connected");
   vi.resetModules();
@@ -36,7 +40,10 @@ async function connected(a: Actor, results: any[] = []) {
         json: async () =>
           input.action === "auth.me"
             ? { ok: true, data: a }
-            : (results.shift() ?? { ok: true, data: {} }),
+            : (results.shift() ?? {
+                ok: true,
+                data: { id: input.payload.id, revision: 2 },
+              }),
       };
     }),
   );
@@ -135,4 +142,31 @@ it("cannot retry another user session or silently send demo operations to connec
   expect(api.calls).toEqual(["auth.me"]);
   expect(await outbox(api.outboxOwner(a))).toHaveLength(1);
   expect(await outbox("demo:" + a.id)).toHaveLength(1);
+});
+
+it("retains a malformed success reply and retries with the same operation identity", async () => {
+  const a = actor();
+  const api = await connected(a, [{ ok: true, data: {} }]);
+  const op = operation();
+  const owner = api.outboxOwner(a);
+  await queue(owner, op);
+  await expect(api.retry(a)).rejects.toThrow(
+    "Konfirmasi penyimpanan belum valid",
+  );
+  expect(await outbox(owner)).toEqual([
+    expect.objectContaining({
+      operationId: op.operationId,
+      status: "Gagal dikirim",
+    }),
+  ]);
+  await api.retry(a);
+  expect(await outbox(owner)).toHaveLength(0);
+  const writes = vi
+    .mocked(fetch)
+    .mock.calls.map(([, options]) => JSON.parse(String(options?.body)))
+    .filter((input) => input.action === "requests.transition");
+  expect(writes.map((input) => input.payload.operationId)).toEqual([
+    op.operationId,
+    op.operationId,
+  ]);
 });

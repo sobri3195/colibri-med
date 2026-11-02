@@ -4,19 +4,20 @@ import {
   tableLabel,
   actionLabel,
   listDate,
+  recordSourceLabel,
 } from "../src/lib/presentation";
 describe("product labels preserve provenance", () => {
   it("never calls a demo record server-confirmed", () => {
-    expect(displayStatus("Tercatat di Server", true)).toBe(
-      "Tersimpan di perangkat",
-    );
-    expect(displayStatus("Tercatat di Server", false)).toBe(
-      "Tercatat di server",
-    );
+    expect(displayStatus("Tercatat di Server", true)).toBe("Permohonan baru");
+    expect(displayStatus("Tercatat di Server", false)).toBe("Permohonan baru");
     expect(displayStatus("Menunggu jaringan", false)).toBe(
       "Menunggu sinkronisasi",
     );
-    expect(displayStatus("Konflik perubahan", true)).toBe("Konflik perubahan");
+    expect(recordSourceLabel(true)).toBe("Tersimpan di perangkat");
+    expect(recordSourceLabel(false)).toBe("Tersinkron ke server");
+    expect(displayStatus("Konflik perubahan", true)).toBe(
+      "Perlu tinjauan konflik",
+    );
   });
   it("uses WIB for compact dates and handles absent dates honestly", () => {
     expect(listDate("2026-11-01T18:00:00.000Z")).toContain("2 Nov");

@@ -1,5 +1,7 @@
-import type { Actor, RecordData, Role } from "../types";
-import { getLocal, putLocal } from "./storage";
+import { transitionProblem } from "../lib/workflow";
+import { canAction, canReadTable } from "../lib/permissions";
+import type { Actor, RecordData } from "../types";
+import { editDemo, notifyDataChanged } from "./storage";
 import {
   missionStages,
   requestStages,
@@ -15,7 +17,11 @@ import {
   aviationSnapshot,
   aircraftReportSchema,
 } from "../lib/aviation";
-type State = {
+export type State = {
+  scenarios?: Record<
+    string,
+    { requestId: string; loadedAt: string; version: number }
+  >;
   tables: Record<string, RecordData[]>;
   processed: Record<
     string,
@@ -76,17 +82,6 @@ export function seed(): State {
     },
   };
 }
-const grants: Record<string, Role[]> = {
-  requests: ["Operator"],
-  resources: ["Operator"],
-  missions: ["Operator"],
-  medicalReviews: ["Koordinator medis"],
-  flightReviews: ["Koordinator penerbangan"],
-  patientNotes: ["Dokter/perawat"],
-  checklists: ["Dokter/perawat", "Koordinator penerbangan"],
-  handovers: ["Rumah sakit penerima", "Dokter/perawat"],
-  aircraftReports: ["Koordinator penerbangan", "Dokter/perawat"],
-};
 const tables: Record<string, string> = {
   requests: "Requests",
   missions: "Missions",
@@ -114,7 +109,11 @@ export function execute(
   actor: Actor | null,
   action: string,
   p: any,
+  now = Date.now(),
 ): unknown {
+  const at = new Date(now).toISOString();
+  const createRecord = (data: Record<string, unknown>) =>
+    record({ ...data, createdAt: at, updatedAt: at });
   if (action === "auth.me") return actor;
   const [group, verb] = action.split(".");
   const table = tables[group];
@@ -131,6 +130,8 @@ export function execute(
     throw Error(
       "FORBIDDEN: Gunakan ringkasan pengawasan pimpinan; data operasional rinci dibatasi",
     );
+  if (!canAction(actor, action))
+    throw Error("FORBIDDEN: Peran tidak berwenang untuk tindakan ini");
   if (action === "aircraft.snapshot") return aviationSnapshot(s.tables);
   if (verb === "list" || verb === "get") {
     if (!table) throw Error("ACTION: Action tidak tersedia");
@@ -138,9 +139,7 @@ export function execute(
     if (
       group === "patientNotes" &&
       actor &&
-      !["Dokter/perawat", "Koordinator medis", "Administrator"].includes(
-        actor.role,
-      )
+      !canReadTable(actor, "PatientNotes")
     )
       throw Error("FORBIDDEN: Catatan dibatasi");
     if (verb === "get") return rows.find((r) => r.id === p.id) ?? null;
@@ -166,18 +165,9 @@ export function execute(
     return Object.fromEntries(
       Object.entries(s.tables).filter(
         ([key]) =>
-          key !== "PatientNotes" ||
-          ["Dokter/perawat", "Koordinator medis", "Administrator"].includes(
-            actor!.role,
-          ),
+          key !== "PatientNotes" || canReadTable(actor, "PatientNotes"),
       ),
     );
-  if (
-    actor?.role !== "Administrator" &&
-    !(grants[group] ?? []).includes(actor?.role as Role) &&
-    !(action === "requests.create")
-  )
-    throw Error("FORBIDDEN: Peran tidak berwenang");
   if (
     !table ||
     !["create", "update", "transition", "assign", "save", "reassign"].includes(
@@ -254,21 +244,20 @@ export function execute(
       !s.tables.Missions.some((m) => m.id === data.missionId)
     )
       throw Error("VALIDATION: Referensi misi tidak ditemukan");
-    const now = new Date().toISOString();
-    if (data.lat !== "") aircraft.positionReportedAt = now;
+    if (data.lat !== "") aircraft.positionReportedAt = at;
     aircraft.lat = data.lat === "" ? aircraft.lat : data.lat;
     aircraft.lng = data.lng === "" ? aircraft.lng : data.lng;
     aircraft.status = data.aircraftStatus;
     aircraft.missionId = data.missionId;
-    aircraft.updatedAt = now;
+    aircraft.updatedAt = at;
     aircraft.updatedBy = owner;
     aircraft.revision++;
-    row = record({
+    row = createRecord({
       ...data,
       id: p.id ?? crypto.randomUUID(),
       lat: aircraft.lat,
       lng: aircraft.lng,
-      reportedAt: now,
+      reportedAt: at,
       aircraftRevision: aircraft.revision,
       positionSupplied: data.lat !== "",
       status: "Dicatat",
@@ -279,7 +268,7 @@ export function execute(
   } else if (action === "requests.create") {
     if (row) throw Error("CONFLICT: ID sudah digunakan");
     const data = parseRequest(p.data);
-    row = record({
+    row = createRecord({
       ...data,
       id: p.id ?? crypto.randomUUID(),
       status: "Tercatat di Server",
@@ -298,7 +287,38 @@ export function execute(
       throw Error("WORKFLOW: Permohonan harus dalam koordinasi");
     if (s.tables.Missions.some((r) => r.requestId === p.requestId))
       throw Error("WORKFLOW: Misi sudah dibuat");
-    row = record({
+    const resourceIds: string[] = p.resourceIds ?? [];
+    if (
+      !Array.isArray(resourceIds) ||
+      new Set(resourceIds).size !== resourceIds.length ||
+      resourceIds.some(
+        (id) =>
+          !s.tables.Resources.some(
+            (r) => r.id === id && r.status === "Siap simulasi",
+          ),
+      )
+    )
+      throw Error(
+        "WORKFLOW: Sumber daya harus tersedia dan berstatus Siap simulasi. Tinjau sumber daya terlebih dahulu.",
+      );
+    if (
+      p.aircraftId &&
+      !s.tables.Aircraft.some(
+        (a) => a.id === p.aircraftId && a.isSynthetic === true,
+      )
+    )
+      throw Error("VALIDATION: Helikopter sintetis tidak ditemukan");
+    if (
+      p.receivingFacilityId &&
+      !s.tables.Facilities.some((f) => f.id === p.receivingFacilityId)
+    )
+      throw Error("VALIDATION: Fasilitas penerima tidak ditemukan");
+    row = createRecord({
+      ...(p.aircraftId ? { aircraftId: p.aircraftId } : {}),
+      ...(p.receivingFacilityId
+        ? { receivingFacilityId: p.receivingFacilityId }
+        : {}),
+      ...(resourceIds.length ? { resourceIds } : {}),
       id: p.id ?? crypto.randomUUID(),
       requestId: p.requestId,
       status: "Persiapan",
@@ -307,8 +327,10 @@ export function execute(
     });
     s.tables.Missions.push(row);
     s.tables.MissionAssignments.push(
-      record({
+      createRecord({
         missionId: row.id,
+        ...(row.resourceIds ? { resourceIds: row.resourceIds } : {}),
+        ...(row.aircraftId ? { aircraftId: row.aircraftId } : {}),
         team: p.team,
         createdBy: owner,
         status: "Ditugaskan",
@@ -334,13 +356,15 @@ export function execute(
       (a) => a.missionId === row!.id && a.status === "Ditugaskan",
     )) {
       assignment.status = "Diganti";
-      assignment.updatedAt = new Date().toISOString();
+      assignment.updatedAt = at;
       assignment.updatedBy = owner;
       assignment.revision++;
     }
     s.tables.MissionAssignments.push(
-      record({
+      createRecord({
         missionId: row.id,
+        ...(row.resourceIds ? { resourceIds: row.resourceIds } : {}),
+        ...(row.aircraftId ? { aircraftId: row.aircraftId } : {}),
         team: row.team,
         reason: row.reason,
         createdBy: owner,
@@ -368,7 +392,7 @@ export function execute(
       );
     if (row) Object.assign(row, parsed.data);
     else {
-      row = record({
+      row = createRecord({
         ...parsed.data,
         id: p.id ?? crypto.randomUUID(),
         createdBy: owner,
@@ -398,35 +422,16 @@ export function execute(
     )
       throw Error("VALIDATION: Alasan tidak valid");
     if (!row) throw Error("NOT_FOUND: Record tidak ditemukan");
-    const stages = group === "missions" ? missionStages : requestStages;
-    if (p.status === "Dibatalkan" && group !== "missions")
-      throw Error("WORKFLOW: Status tidak valid");
-    if (p.status === "Dibatalkan" && !String(p.reason ?? "").trim())
-      throw Error("WORKFLOW: Alasan pembatalan diperlukan");
-    if (row.status === "Selesai" || row.status === "Dibatalkan")
-      throw Error("WORKFLOW: Misi telah ditutup");
-    if (
-      p.status !== "Dibatalkan" &&
-      stages.indexOf(String(p.status)) !== stages.indexOf(row.status) + 1
-    )
-      throw Error("WORKFLOW: Transisi tidak valid");
-    if (
-      p.status === "Berangkat" &&
-      s.tables.FlightReviews.filter((r) => r.requestId === row!.requestId).at(
-        -1,
-      )?.status !== "Disetujui"
-    )
-      throw Error("WORKFLOW: Persetujuan penerbangan diperlukan");
-    if (p.status === "Tim Ditugaskan" && !row.team)
-      throw Error("WORKFLOW: Tim diperlukan");
-    if (
-      p.status === "Selesai" &&
-      !s.tables.HandoverRecords.some((r) => r.missionId === row!.id) &&
-      !String(p.reason ?? "").trim()
-    )
-      throw Error("WORKFLOW: Serah terima atau alasan override diperlukan");
+    const problem = transitionProblem(
+      s.tables,
+      group,
+      row,
+      String(p.status),
+      p.reason,
+    );
+    if (problem) throw Error("WORKFLOW: " + problem);
     row.status = p.status;
-    if (group === "missions") row.stageChangedAt = new Date().toISOString();
+    if (group === "missions") row.stageChangedAt = at;
     if (p.reason) row.reason = p.reason;
   } else if (["save", "create"].includes(verb)) {
     if (
@@ -510,7 +515,7 @@ export function execute(
     };
     if (row) Object.assign(row, data);
     else {
-      row = record({
+      row = createRecord({
         ...data,
         id: p.id ?? crypto.randomUUID(),
         createdBy: owner,
@@ -518,18 +523,29 @@ export function execute(
       s.tables[table].push(row);
     }
   } else throw Error("ACTION: Action tidak tersedia");
-  row!.updatedAt = new Date().toISOString();
+  const scenarioParent =
+    s.tables.Requests.find((r) => r.id === row!.requestId) ??
+    s.tables.Missions.find((m) => m.id === row!.missionId) ??
+    s.tables.Aircraft.find((a) => a.id === row!.aircraftId);
+  if (scenarioParent?.demoScenario)
+    row!.demoScenario = scenarioParent.demoScenario;
+  if (row!.demoScenario)
+    for (const assignment of s.tables.MissionAssignments)
+      if (assignment.missionId === row!.id)
+        assignment.demoScenario = row!.demoScenario;
+  row!.updatedAt = at;
   row!.updatedBy = owner;
   row!.revision = (priorRevision ?? 0) + 1;
   s.tables.ActivityLogs.unshift(
-    record({
+    createRecord({
+      ...(row!.demoScenario ? { demoScenario: row!.demoScenario } : {}),
       action,
       entityId: row!.id,
       createdBy: owner,
       status: row!.status,
       previousStatus,
       durationSeconds: previousUpdatedAt
-        ? Math.max(0, (Date.now() - Date.parse(previousUpdatedAt)) / 1000)
+        ? Math.max(0, (now - Date.parse(previousUpdatedAt)) / 1000)
         : 0,
       reason: String(p.reason ?? row!.reason ?? ""),
     }),
@@ -543,17 +559,17 @@ export function execute(
   return result;
 }
 export async function demoCall(actor: Actor | null, action: string, p: any) {
-  const run = async () => {
-    const s: State = (await getLocal("demo", "state")) ?? seed();
+  const result = await editDemo((stored) => {
+    const s: State = (stored as State | undefined) ?? seed();
     if (!Object.hasOwn(s.tables, "Aircraft")) {
       const fixtures = seedAircraft(record);
       s.tables.Aircraft = fixtures.aircraft;
       s.tables.AircraftReports = fixtures.reports;
     }
     s.tables.AircraftReports ??= [];
-    const result = execute(s, actor, action, p);
-    await putLocal("demo", "state", s);
-    return result;
-  };
-  return navigator.locks ? navigator.locks.request("colibri-demo", run) : run();
+    return { state: s, result: execute(s, actor, action, p) };
+  });
+  if (!/\.(list|get|summary|snapshot)$/.test(action) && action !== "auth.me")
+    notifyDataChanged();
+  return result;
 }

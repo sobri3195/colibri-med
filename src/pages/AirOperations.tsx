@@ -1,3 +1,4 @@
+import { canAction } from "../lib/permissions";
 import { StatusBadge } from "../components/MobileUI";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -156,11 +157,7 @@ export default function AirOperations({
         v.toLowerCase().includes(search.toLowerCase()),
       ),
   );
-  const canReport = [
-    "Administrator",
-    "Koordinator penerbangan",
-    "Dokter/perawat",
-  ].includes(actor.role);
+  const canReport = canAction(actor, "aircraftReports.create");
   return (
     <div
       className={
