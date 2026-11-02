@@ -1,3 +1,5 @@
+import { mode } from "../services/api";
+import { displayStatus } from "../lib/presentation";
 import type { ReactNode } from "react";
 import {
   CircleCheck,
@@ -30,7 +32,7 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`badge status-badge status-${tone}`}>
       <Icon size={14} aria-hidden="true" />
-      {status}
+      {displayStatus(status, mode === "demo")}
     </span>
   );
 }

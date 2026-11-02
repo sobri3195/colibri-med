@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 const screens = [
-  ["/mobile", "Koordinasi dalam", "Beranda"],
+  ["/mobile", "Ruang kerja koordinasi", "Beranda"],
   ["/mobile/permohonan", "Mulai koordinasi", "Permohonan"],
   ["/mobile/operasi/permohonan", "Permohonan", "Permohonan"],
   ["/mobile/misi", "Papan misi", "Misi"],
@@ -57,7 +57,9 @@ for (const [width, height] of [
       const nav = await page
         .getByRole("navigation", { name: "Navigasi bawah" })
         .boundingBox();
-      expect(footer!.y + footer!.height).toBeLessThan(nav!.y);
+      if (width >= 1100)
+        expect(footer!.x).toBeGreaterThanOrEqual(nav!.x + nav!.width);
+      else expect(footer!.y + footer!.height).toBeLessThan(nav!.y);
     }
   });
 }
@@ -107,6 +109,10 @@ test("overview uses stored counts and the mission timeline shows recorded events
     page.getByText("Belum ada misi tercatat", { exact: true }),
   ).toBeVisible();
   await page.goto("/mobile/operasi/permohonan");
+  await page
+    .getByRole("button", { name: /^Lihat detail/ })
+    .first()
+    .click();
   for (const status of [
     "Diterima Operator",
     "Diverifikasi",

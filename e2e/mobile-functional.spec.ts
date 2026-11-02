@@ -220,7 +220,7 @@ test("mobile offline submissions survive reload, retry without duplicates and is
   await context.setOffline(true);
   await page.getByRole("button", { name: "Kirim permohonan simulasi" }).click();
   await expect(
-    page.getByText("Menunggu jaringan — tersimpan di outbox lokal.", {
+    page.getByText("Menunggu sinkronisasi — tersimpan di perangkat.", {
       exact: true,
     }),
   ).toBeVisible();
@@ -255,7 +255,7 @@ test("mobile offline submissions survive reload, retry without duplicates and is
     }),
   });
   await expect(list.locator(".mobile-record")).toHaveCount(1);
-  await list.getByRole("button", { name: /Buka permohonan/ }).click();
+  await list.getByRole("button", { name: /Lihat detail/ }).click();
   await expect(
     page.getByRole("combobox", { name: "Pilih permohonan" }),
   ).not.toHaveValue("");

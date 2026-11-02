@@ -74,6 +74,13 @@ test("mobile protected destinations return after login and account exposes all m
     .click();
   await expect(page).toHaveURL(/\/mobile\/operasi\/permohonan$/);
   await expect(
+    page.getByRole("heading", { name: "Daftar permohonan", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: /^Lihat detail/ })
+    .first()
+    .click();
+  await expect(
     page.getByRole("heading", { name: "Ruang kerja permohonan" }),
   ).toBeVisible();
   await expect(

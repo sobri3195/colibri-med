@@ -79,14 +79,14 @@ test("leadership exports aggregates and preserves period/perspective across tabs
   page,
 }) => {
   await login(page);
-  await page.getByRole("combobox", { name: "Periode kohor" }).selectOption("7");
+  await page.getByRole("combobox", { name: "Rentang waktu" }).selectOption("7");
   await page
     .getByRole("combobox", { name: "Sudut pantau" })
     .selectOption("kemenkes");
   const nav = page.getByRole("navigation", { name: "Navigasi pengawasan" });
   await nav.getByRole("link", { name: "Laporan", exact: true }).click();
   await expect(
-    page.getByRole("combobox", { name: "Periode kohor" }),
+    page.getByRole("combobox", { name: "Rentang waktu" }),
   ).toHaveValue("7");
   await expect(
     page.getByRole("combobox", { name: "Sudut pantau" }),

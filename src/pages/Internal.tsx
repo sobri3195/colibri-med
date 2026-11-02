@@ -1,3 +1,5 @@
+import { tableLabel, actionLabel, displayStatus } from "../lib/presentation";
+import { EmptyState } from "../components/MobileUI";
 import { useCallback, useState, useEffect } from "react";
 import {
   Link,
@@ -97,7 +99,13 @@ export default function Internal({
     setBusy(true);
     try {
       const r = await submit(actor, action, payload);
-      setMessage(r.queued ? "Menunggu jaringan" : "Perubahan dicatat.");
+      setMessage(
+        r.queued
+          ? "Menunggu sinkronisasi"
+          : mode === "demo"
+            ? "Tersimpan di perangkat"
+            : "Perubahan dicatat.",
+      );
       await poll.refresh();
       return r;
     } catch (e) {
@@ -153,6 +161,13 @@ export default function Internal({
       status={filter}
       compact={compact}
       requests={requests}
+      selectedId={
+        compact && !selected
+          ? undefined
+          : section === "misi"
+            ? mission?.id
+            : request?.id
+      }
       onOpen={onOpen}
     />
   );
@@ -214,7 +229,8 @@ export default function Internal({
             role="status"
             className={
               "notice " +
-              (message === "Perubahan dicatat."
+              (message === "Perubahan dicatat." ||
+              message === "Tersimpan di perangkat"
                 ? "feedback-success"
                 : /Error:|[A-Z_]{3,}:/.test(message)
                   ? "feedback-error"
@@ -256,13 +272,42 @@ export default function Internal({
             </label>
             <label className="search-field">
               Filter status
-              <input
+              <select
                 aria-label="Filter status"
-                placeholder="Filter status (teks tepat)"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-              />
+              >
+                <option value="">Semua status</option>
+                {[
+                  ...new Set(
+                    (section === "misi"
+                      ? missions
+                      : section === "fasilitas"
+                        ? (data.Facilities ?? [])
+                        : section === "sumber-daya"
+                          ? (data.Resources ?? [])
+                          : requests
+                    ).map((r) => r.status),
+                  ),
+                ]
+                  .sort()
+                  .map((status) => (
+                    <option key={status} value={status}>
+                      {displayStatus(status, mode === "demo")}
+                    </option>
+                  ))}
+              </select>
             </label>
+            <button
+              className="secondary reset-filter"
+              disabled={!search && !filter}
+              onClick={() => {
+                setSearch("");
+                setFilter("");
+              }}
+            >
+              Reset filter
+            </button>
           </div>
         )}
         {section === "permohonan" && (
@@ -278,279 +323,360 @@ export default function Internal({
         )}
         {section === "misi" && (
           <section className="card">
-            <div className="actions">
+            <div
+              className="view-switch"
+              role="group"
+              aria-label="Tampilan misi"
+            >
               <button
-                className="secondary"
-                onClick={() => setView(view === "table" ? "kanban" : "table")}
+                type="button"
+                aria-pressed={view === "table"}
+                onClick={() => setView("table")}
               >
-                {view === "table" ? "Tampilan kanban" : "Tampilan tabel"}
+                Tampilan tabel
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === "kanban"}
+                onClick={() => setView("kanban")}
+              >
+                Tampilan kanban
               </button>
             </div>
-            {view === "table" ? (
-              rows(missions, (r) => openRequest(String(r.requestId)))
-            ) : (
-              <div className="kanban">
-                {[...missionStages, "Dibatalkan"].map((s) => (
-                  <div key={s}>
-                    <h3>{s}</h3>
-                    {filtered(missions)
-                      .filter((r) => r.status === s)
-                      .map((m) => (
-                        <article className="card" key={m.id}>
-                          <strong>{String(m.team)}</strong>
-                          <p>{m.id.slice(0, 8)}</p>
-                          <button
-                            className="secondary"
-                            onClick={() => openRequest(String(m.requestId))}
-                          >
-                            Buka permohonan
-                          </button>
-                        </article>
-                      ))}
-                  </div>
-                ))}
-              </div>
+            {!missions.length && (
+              <EmptyState
+                title="Belum ada misi tercatat"
+                to={
+                  compact
+                    ? "/mobile/operasi/permohonan"
+                    : "/internal/permohonan"
+                }
+                action="Kelola permohonan"
+              >
+                Terima dan verifikasi permohonan, lalu tetapkan tim untuk
+                membentuk misi.
+              </EmptyState>
             )}
+            {!!missions.length &&
+              (view === "table" ? (
+                rows(missions, (r) => openRequest(String(r.requestId)))
+              ) : (
+                <div className="kanban">
+                  {[...missionStages, "Dibatalkan"].map((s) => (
+                    <div key={s}>
+                      <h3>
+                        {s}{" "}
+                        <span className="badge">
+                          {
+                            filtered(missions).filter((m) => m.status === s)
+                              .length
+                          }
+                        </span>
+                      </h3>
+                      {filtered(missions)
+                        .filter((r) => r.status === s)
+                        .map((m) => (
+                          <article className="card" key={m.id}>
+                            <strong>{String(m.team)}</strong>
+                            <p>{m.id.slice(0, 8)}</p>
+                            <button
+                              className="secondary"
+                              onClick={() => openRequest(String(m.requestId))}
+                            >
+                              Buka permohonan
+                            </button>
+                          </article>
+                        ))}
+                    </div>
+                  ))}
+                </div>
+              ))}
           </section>
         )}
-        {["permohonan", "misi", "penilaian"].includes(section) && (
-          <section className="card" id="request-workspace">
-            <h2>Ruang kerja permohonan</h2>
-            {selected && !request && !poll.loading && (
-              <p role="alert">
-                Permohonan yang dipilih tidak ditemukan. Pilih record lain;
-                tidak ada perubahan yang dikirim.
-              </p>
-            )}
-            <label>
-              Pilih permohonan
-              <select
-                value={request?.id ?? ""}
-                onChange={(e) => setSelected(e.target.value)}
-              >
-                <option value="" disabled>
-                  Pilih permohonan
-                </option>
-                {requests.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.id.slice(0, 8)} · {String(r.facility)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {!request && !selected && !poll.loading && (
-              <p className="empty">
-                Belum ada permohonan.{" "}
-                {compact && (
-                  <Link to="/mobile/permohonan">Buat permohonan simulasi</Link>
+        {["permohonan", "misi", "penilaian"].includes(section) &&
+          (!compact || !!selected || section === "penilaian") && (
+            <section className="card" id="request-workspace">
+              <div className="detail-heading">
+                <h2>
+                  {section === "misi"
+                    ? "Detail misi & permohonan terkait"
+                    : "Ruang kerja permohonan"}
+                </h2>
+                {compact && selected && (
+                  <button className="secondary" onClick={() => setSelected("")}>
+                    Tutup detail
+                  </button>
                 )}
-              </p>
-            )}
-            {request && (
-              <>
-                <p>
-                  {String(request.summary)} ·{" "}
-                  <StatusBadge status={request.status} />
+              </div>
+              {section === "misi" && (
+                <p className="muted">
+                  Misi terhubung ke permohonan berikut. Perubahan permohonan dan
+                  keputusan penerbangan tetap dicatat terpisah.
                 </p>
-                <p>
-                  Lokasi: {String(request.location)} · Akses:{" "}
-                  {String(request.access)}
-                </p>
-                {allowed("Operator") && (
+              )}
+              {request && (
+                <div className="selected-request">
+                  <strong>{String(request.facility)}</strong>
                   <details>
-                    <summary>Perbarui ringkasan permohonan</summary>
-                    <form
-                      key={request.id + ":" + request.revision}
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const f = new FormData(e.currentTarget);
-                        void act("requests.update", {
-                          id: request.id,
-                          baseRevision: request.revision,
-                          data: { ...request, summary: f.get("summary") },
-                        });
-                      }}
-                    >
-                      <label>
-                        Ringkasan sintetis
-                        <textarea
-                          name="summary"
-                          required
-                          maxLength={2000}
-                          defaultValue={String(request.summary)}
-                        />
-                      </label>
-                      <button disabled={busy}>
-                        Simpan perubahan permohonan
-                      </button>
-                    </form>
+                    <summary>Referensi dan waktu lengkap</summary>
+                    <p>{request.id}</p>
+                    <p>Diperbarui {date(request.updatedAt)}</p>
                   </details>
+                </div>
+              )}
+              {request &&
+                (search || filter) &&
+                !(section === "misi"
+                  ? filtered(missions).some((m) => m.requestId === request.id)
+                  : filtered(requests).some((r) => r.id === request.id)) && (
+                  <p role="status" className="notice">
+                    Item terpilih berada di luar hasil filter. Ruang kerja ini
+                    tetap untuk {String(request.facility)} ·{" "}
+                    {request.id.slice(0, 8)}. Reset filter untuk melihatnya di
+                    daftar.
+                  </p>
                 )}
-                {allowed("Operator") && (
-                  <div className="actions">
-                    {requestStages.indexOf(request.status) <
-                      requestStages.length - 1 && (
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          void act("requests.transition", {
-                            id: request.id,
-                            baseRevision: request.revision,
-                            status:
-                              requestStages[
-                                requestStages.indexOf(request.status) + 1
-                              ],
-                          })
-                        }
-                      >
-                        Permohonan →{" "}
-                        {
-                          requestStages[
-                            requestStages.indexOf(request.status) + 1
-                          ]
-                        }
-                      </button>
-                    )}
-                    {!mission && request.status === "Dalam Koordinasi" && (
+              {selected && !request && !poll.loading && (
+                <p role="alert">
+                  Permohonan yang dipilih tidak ditemukan. Pilih record lain;
+                  tidak ada perubahan yang dikirim.
+                </p>
+              )}
+              <label>
+                Pilih permohonan
+                <select
+                  value={request?.id ?? ""}
+                  onChange={(e) => setSelected(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Pilih permohonan
+                  </option>
+                  {requests.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.id.slice(0, 8)} · {String(r.facility)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {!request && !selected && !poll.loading && (
+                <p className="empty">
+                  Belum ada permohonan.{" "}
+                  {compact && (
+                    <Link to="/mobile/permohonan">
+                      Buat permohonan simulasi
+                    </Link>
+                  )}
+                </p>
+              )}
+              {request && (
+                <>
+                  <p>
+                    {String(request.summary)} ·{" "}
+                    <StatusBadge status={request.status} />
+                  </p>
+                  <p>
+                    Lokasi: {String(request.location)} · Akses:{" "}
+                    {String(request.access)}
+                  </p>
+                  {allowed("Operator") && (
+                    <details>
+                      <summary>Perbarui ringkasan permohonan</summary>
                       <form
+                        key={request.id + ":" + request.revision}
                         onSubmit={(e) => {
                           e.preventDefault();
                           const f = new FormData(e.currentTarget);
-                          void act("missions.assign", {
-                            requestId: request.id,
-                            team: f.get("team"),
+                          void act("requests.update", {
+                            id: request.id,
+                            baseRevision: request.revision,
+                            data: { ...request, summary: f.get("summary") },
                           });
                         }}
                       >
                         <label>
-                          Tim simulasi
-                          <input name="team" required maxLength={150} />
+                          Ringkasan sintetis
+                          <textarea
+                            name="summary"
+                            required
+                            maxLength={2000}
+                            defaultValue={String(request.summary)}
+                          />
                         </label>
                         <button disabled={busy}>
-                          Buat misi & tetapkan tim
+                          Simpan perubahan permohonan
                         </button>
                       </form>
-                    )}
-                  </div>
-                )}
-                {mission && (
-                  <div className="inset">
-                    <h3>Misi · {mission.status}</h3>
-                    <p className="record-reference">
-                      Misi {mission.id.slice(0, 8)} · Diperbarui{" "}
-                      {date(mission.updatedAt)}
-                    </p>
-                    <p>Tim: {String(mission.team)}</p>
-                    <p>
-                      Asal: {String(request.facility)} · Lokasi:{" "}
-                      {String(request.location)}
-                    </p>
-                    <p className="muted">
-                      Jadwal dan tujuan penerbangan tidak tersedia pada record
-                      misi ini.
-                    </p>
-                    <details className="mission-history">
-                      <summary>Riwayat tahapan tercatat</summary>
-                      <ol>
-                        {(data.ActivityLogs ?? [])
-                          .filter((log) => log.entityId === mission.id)
-                          .slice()
-                          .sort((a, b) =>
-                            a.createdAt.localeCompare(b.createdAt),
-                          )
-                          .map((log, index, logs) => (
-                            <li key={log.id}>
-                              {index === logs.length - 1 &&
-                              log.status === mission.status ? (
-                                <Clock size={18} aria-hidden="true" />
-                              ) : (
-                                <CircleCheck size={18} aria-hidden="true" />
-                              )}
-                              <div>
-                                <strong>{log.status}</strong>
-                                <span>
-                                  {index === logs.length - 1 &&
-                                  log.status === mission.status
-                                    ? "Status saat ini"
-                                    : "Tahap tercatat"}{" "}
-                                  · {date(log.createdAt)}
-                                </span>
-                                {!!log.reason && <p>{String(log.reason)}</p>}
-                              </div>
-                            </li>
-                          ))}
-                      </ol>
-                      {!(data.ActivityLogs ?? []).some(
-                        (log) => log.entityId === mission.id,
-                      ) && <p>Belum ada riwayat tahapan tersimpan.</p>}
-                      <small>
-                        Hanya menampilkan kejadian tersimpan, tanpa perkiraan
-                        progres.
-                      </small>
                     </details>
-                    {allowed("Operator") && (
-                      <MissionControls
-                        mission={mission}
-                        busy={busy}
-                        act={act}
-                      />
-                    )}
-                  </div>
-                )}
-                {[
-                  ["medicalReviews", "Penilaian medis", "Koordinator medis"],
-                  [
-                    "flightReviews",
-                    "Tinjauan penerbangan",
-                    "Koordinator penerbangan",
-                  ],
-                  ["patientNotes", "Catatan pasien sintetis", "Dokter/perawat"],
-                  ["checklists", "Checklist", "Dokter/perawat"],
-                  ["handovers", "Serah terima", "Rumah sakit penerima"],
-                ].map(
-                  ([group, title, role]) =>
-                    allowed(
-                      role,
-                      ...(group === "handovers"
-                        ? ["Dokter/perawat"]
-                        : group === "checklists"
-                          ? ["Koordinator penerbangan"]
-                          : []),
-                    ) && (
-                      <OperationalForm
-                        key={group + ":" + request.id}
-                        actor={actor}
-                        request={request}
-                        mission={mission}
-                        group={group}
-                        title={title}
-                        current={(
-                          data[
-                            group === "medicalReviews"
-                              ? "MedicalReviews"
-                              : group === "flightReviews"
-                                ? "FlightReviews"
-                                : group === "checklists"
-                                  ? "Checklists"
-                                  : ""
-                          ] ?? []
-                        )
-                          .filter((r) => r.requestId === request.id)
-                          .at(-1)}
-                        busy={busy}
-                        act={act}
-                        notice={setMessage}
-                      />
-                    ),
-                )}
-                <p className="muted">
-                  Rekomendasi medis tidak memberikan persetujuan penerbangan.
-                  Semua keputusan dicatat oleh petugas berwenang.
-                </p>
-              </>
-            )}
-          </section>
-        )}
+                  )}
+                  {allowed("Operator") && (
+                    <div className="actions">
+                      {requestStages.indexOf(request.status) <
+                        requestStages.length - 1 && (
+                        <button
+                          disabled={busy}
+                          onClick={() =>
+                            void act("requests.transition", {
+                              id: request.id,
+                              baseRevision: request.revision,
+                              status:
+                                requestStages[
+                                  requestStages.indexOf(request.status) + 1
+                                ],
+                            })
+                          }
+                        >
+                          Permohonan →{" "}
+                          {
+                            requestStages[
+                              requestStages.indexOf(request.status) + 1
+                            ]
+                          }
+                        </button>
+                      )}
+                      {!mission && request.status === "Dalam Koordinasi" && (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            const f = new FormData(e.currentTarget);
+                            void act("missions.assign", {
+                              requestId: request.id,
+                              team: f.get("team"),
+                            });
+                          }}
+                        >
+                          <label>
+                            Tim simulasi
+                            <input name="team" required maxLength={150} />
+                          </label>
+                          <button disabled={busy}>
+                            Buat misi & tetapkan tim
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  )}
+                  {mission && (
+                    <div className="inset">
+                      <h3>Misi · {mission.status}</h3>
+                      <p className="record-reference">
+                        Misi {mission.id.slice(0, 8)} · Diperbarui{" "}
+                        {date(mission.updatedAt)}
+                      </p>
+                      <p>Tim: {String(mission.team)}</p>
+                      <p>
+                        Asal: {String(request.facility)} · Lokasi:{" "}
+                        {String(request.location)}
+                      </p>
+                      <p className="muted">
+                        Jadwal dan tujuan penerbangan tidak tersedia pada record
+                        misi ini.
+                      </p>
+                      <details className="mission-history">
+                        <summary>Riwayat tahapan tercatat</summary>
+                        <ol>
+                          {(data.ActivityLogs ?? [])
+                            .filter((log) => log.entityId === mission.id)
+                            .slice()
+                            .sort((a, b) =>
+                              a.createdAt.localeCompare(b.createdAt),
+                            )
+                            .map((log, index, logs) => (
+                              <li key={log.id}>
+                                {index === logs.length - 1 &&
+                                log.status === mission.status ? (
+                                  <Clock size={18} aria-hidden="true" />
+                                ) : (
+                                  <CircleCheck size={18} aria-hidden="true" />
+                                )}
+                                <div>
+                                  <strong>{log.status}</strong>
+                                  <span>
+                                    {index === logs.length - 1 &&
+                                    log.status === mission.status
+                                      ? "Status saat ini"
+                                      : "Tahap tercatat"}{" "}
+                                    · {date(log.createdAt)}
+                                  </span>
+                                  {!!log.reason && <p>{String(log.reason)}</p>}
+                                </div>
+                              </li>
+                            ))}
+                        </ol>
+                        {!(data.ActivityLogs ?? []).some(
+                          (log) => log.entityId === mission.id,
+                        ) && <p>Belum ada riwayat tahapan tersimpan.</p>}
+                        <small>
+                          Hanya menampilkan kejadian tersimpan, tanpa perkiraan
+                          progres.
+                        </small>
+                      </details>
+                      {allowed("Operator") && (
+                        <MissionControls
+                          mission={mission}
+                          busy={busy}
+                          act={act}
+                        />
+                      )}
+                    </div>
+                  )}
+                  {[
+                    ["medicalReviews", "Penilaian medis", "Koordinator medis"],
+                    [
+                      "flightReviews",
+                      "Tinjauan penerbangan",
+                      "Koordinator penerbangan",
+                    ],
+                    [
+                      "patientNotes",
+                      "Catatan pasien sintetis",
+                      "Dokter/perawat",
+                    ],
+                    ["checklists", "Checklist", "Dokter/perawat"],
+                    ["handovers", "Serah terima", "Rumah sakit penerima"],
+                  ].map(
+                    ([group, title, role]) =>
+                      allowed(
+                        role,
+                        ...(group === "handovers"
+                          ? ["Dokter/perawat"]
+                          : group === "checklists"
+                            ? ["Koordinator penerbangan"]
+                            : []),
+                      ) && (
+                        <OperationalForm
+                          key={group + ":" + request.id}
+                          actor={actor}
+                          request={request}
+                          mission={mission}
+                          group={group}
+                          title={title}
+                          current={(
+                            data[
+                              group === "medicalReviews"
+                                ? "MedicalReviews"
+                                : group === "flightReviews"
+                                  ? "FlightReviews"
+                                  : group === "checklists"
+                                    ? "Checklists"
+                                    : ""
+                            ] ?? []
+                          )
+                            .filter((r) => r.requestId === request.id)
+                            .at(-1)}
+                          busy={busy}
+                          act={act}
+                          notice={setMessage}
+                        />
+                      ),
+                  )}
+                  <p className="muted">
+                    Rekomendasi medis tidak memberikan persetujuan penerbangan.
+                    Semua keputusan dicatat oleh petugas berwenang.
+                  </p>
+                </>
+              )}
+            </section>
+          )}
         {section === "penilaian" &&
           Object.entries(data)
             .filter(([k]) =>
@@ -564,7 +690,7 @@ export default function Internal({
             )
             .map(([k, v]) => (
               <section key={k} className="card">
-                <h3>{k}</h3>
+                <h3>{tableLabel(k)}</h3>
                 {rows(v.filter((r) => r.requestId === request?.id))}
               </section>
             ))}
@@ -683,9 +809,9 @@ export default function Internal({
                     csv(
                       Object.entries(data).flatMap(([table, records]) =>
                         records.map((r) => ({
-                          table,
+                          table: tableLabel(table),
                           id: r.id,
-                          status: r.status,
+                          status: displayStatus(r.status, mode === "demo"),
                           createdAt: r.createdAt,
                           updatedAt: r.updatedAt,
                           reason: r.reason ?? "",
@@ -709,12 +835,12 @@ export default function Internal({
                   for (const line of [
                     "COLIBRI MED — PROTOTIPE SIMULASI — DATA SINTETIS",
                     ...Object.entries(data).flatMap(([table, records]) => [
-                      table + " (" + records.length + ")",
+                      tableLabel(table) + " (" + records.length + ")",
                       ...records.map(
                         (r) =>
                           r.id.slice(0, 8) +
                           " | " +
-                          r.status +
+                          displayStatus(r.status, mode === "demo") +
                           " | " +
                           String(r.reason ?? "") +
                           (r.durationSeconds !== undefined
@@ -744,7 +870,7 @@ export default function Internal({
             </div>
             {Object.entries(data).map(([k, v]) => (
               <div key={k}>
-                <h3>{k}</h3>
+                <h3>{tableLabel(k)}</h3>
                 {rows(v)}
               </div>
             ))}
@@ -777,9 +903,16 @@ export default function Internal({
             {pending.map((p) => (
               <details key={p.operationId}>
                 <summary>
-                  {p.action} · {p.status} · percobaan {p.retryCount}
+                  {actionLabel(p.action)} ·{" "}
+                  {displayStatus(p.status, mode === "demo")} · percobaan{" "}
+                  {p.retryCount}
                 </summary>
-                <p>ID operasi: {p.operationId}</p>
+                <details>
+                  <summary>Referensi teknis operasi</summary>
+                  <p>
+                    {p.action} · ID operasi: {p.operationId}
+                  </p>
+                </details>
                 <p>
                   Revision lokal: {p.baseRevision} · Revision data terbaru:{" "}
                   {Object.values(data)

@@ -31,6 +31,7 @@ import {
 } from "./services/session";
 import "./styles.css";
 import "./mobile-experience.css";
+import "./coordination-polish.css";
 function App() {
   const [initialDemo] = useState(() =>
     mode === "demo" ? readDemoSession() : null,
@@ -127,7 +128,7 @@ function App() {
     <div
       className={
         isLeadership
-          ? "app-shell mobile-app leadership-app"
+          ? "app-shell mobile-app coordination-app leadership-app"
           : isMobile
             ? "app-shell mobile-app coordination-app" +
               (location.pathname.replace(/\/+$/, "") === "/mobile/login" &&

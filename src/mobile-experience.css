@@ -308,7 +308,7 @@
   font-size: 13px;
   padding: 12px;
 }
-.coordination-app button:not(.login-enter),
+.coordination-app button:not(.login-enter):not(.tertiary):not(.mobile-profile),
 .coordination-app .button {
   min-height: 48px;
   border-radius: 12px;
@@ -318,7 +318,16 @@
   overflow-wrap: anywhere;
 }
 .coordination-app
-  button:not(.secondary):not(.mobile-logout):not(.danger):not(.login-enter),
+  button:not(
+    :is(
+      .secondary,
+      .mobile-logout,
+      .danger,
+      .login-enter,
+      .tertiary,
+      .mobile-profile
+    )
+  ),
 .coordination-app .button:not(.secondary) {
   background: var(--coord-teal);
 }

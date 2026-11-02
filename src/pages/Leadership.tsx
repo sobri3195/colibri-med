@@ -1,3 +1,7 @@
+import { displayStatus } from "../lib/presentation";
+import { useNavigationClearance } from "../features/useNavigationClearance";
+import { EmptyState } from "../components/MobileUI";
+import { mode } from "../services/api";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
@@ -54,12 +58,14 @@ function Distribution({
   const max = Math.max(1, ...items.map((i) => i.count));
   return (
     <section className="card leadership-distribution">
-      <h2>{title}</h2>
+      <h2 id={title === "Tahapan misi" ? "tahapan-misi" : "tahapan-permohonan"}>
+        {title}
+      </h2>
       {items.some((i) => i.count > 0) ? (
         items.map((item) => (
           <div className="leadership-status-row" key={item.label}>
             <div>
-              <span>{item.label}</span>
+              <span>{displayStatus(item.label, mode === "demo")}</span>
               <strong>{item.count}</strong>
             </div>
             <div className="leadership-track" aria-hidden="true">
@@ -102,34 +108,47 @@ function Trend({ data }: { data: LeadershipSummary }) {
           ))}
         </select>
       </label>
-      <figure>
-        <div
-          className="leadership-bars"
-          style={{
-            gridTemplateColumns: `repeat(${data.trend.length},minmax(0,1fr))`,
-          }}
-        >
-          {data.trend.map((day) => (
-            <div
-              key={day.date}
-              className="leadership-bar-slot"
-              title={day.date + ": " + day[metric]}
-            >
-              <span
-                className={day[metric] ? "has-value" : ""}
-                style={{ height: Math.max(2, (day[metric] / max) * 100) + "%" }}
-              />
-              <span className="sr-only">
-                {day.date}: {day[metric]}
-              </span>
-            </div>
-          ))}
-        </div>
-        <figcaption>
-          <span>{data.trend[0]?.date}</span>
-          <span>{data.trend.at(-1)?.date}</span>
-        </figcaption>
-      </figure>
+      <p className="chart-period">
+        {data.trend[0]?.date ?? "Belum tersedia"} –{" "}
+        {data.trend.at(-1)?.date ?? "Belum tersedia"} · UTC
+      </p>
+      {data.trend.some((day) => day[metric] > 0) ? (
+        <figure>
+          <div
+            className="leadership-bars"
+            style={{
+              gridTemplateColumns: `repeat(${data.trend.length},minmax(0,1fr))`,
+            }}
+          >
+            {data.trend.map((day) => (
+              <div
+                key={day.date}
+                className="leadership-bar-slot"
+                title={day.date + ": " + day[metric]}
+              >
+                <span
+                  className={day[metric] ? "has-value" : ""}
+                  style={{
+                    height: Math.max(2, (day[metric] / max) * 100) + "%",
+                  }}
+                />
+                <span className="sr-only">
+                  {day.date}: {day[metric]}
+                </span>
+              </div>
+            ))}
+          </div>
+          <figcaption>
+            <span>{data.trend[0]?.date}</span>
+            <span>{data.trend.at(-1)?.date}</span>
+          </figcaption>
+        </figure>
+      ) : (
+        <EmptyState title="Belum ada aktivitas untuk indikator ini">
+          Pilih indikator lain atau perluas rentang waktu. Nilai tercatat tetap
+          tersedia pada daftar di bawah.
+        </EmptyState>
+      )}
       <small>
         Tanggal UTC · {data.trend.length} hari. {labels[metric]} dalam kohor.
         Bukan target waktu resmi.
@@ -170,6 +189,7 @@ export default function Leadership({
   onLogin: (a: Actor) => void;
 }) {
   const location = useLocation();
+  const { shellRef, navRef } = useNavigationClearance();
   const section = location.pathname.replace(/\/+$/, "").split("/")[2] ?? "";
   const [params, setParams] = useSearchParams();
   const focus = (
@@ -188,7 +208,7 @@ export default function Leadership({
   const eligible =
     !!actor && ["Viewer pimpinan", "Administrator"].includes(actor.role);
   return (
-    <div className="mobile-shell leadership-shell">
+    <div ref={shellRef} className="mobile-shell leadership-shell">
       <header className="mobile-header">
         <Link
           className="brand"
@@ -211,6 +231,17 @@ export default function Leadership({
           </button>
         )}
       </header>
+      <div className="leadership-identity">
+        <span className="role-chip">{actor?.role ?? "Akses baca"}</span>
+        <span className="mode-chip">
+          {mode === "demo" ? "Mode demo" : "Mode connected"}
+        </span>
+      </div>
+      {section && (
+        <Link className="mobile-back" to={"/pimpinan" + location.search}>
+          ← Kembali ke ringkasan
+        </Link>
+      )}
       <div className="mobile-content leadership-content">
         {checking ? (
           <p role="status">Memeriksa sesi…</p>
@@ -265,6 +296,7 @@ export default function Leadership({
         )}
       </div>
       <nav
+        ref={navRef}
         className="bottom-navigation leadership-navigation"
         aria-label="Navigasi pengawasan"
       >
@@ -305,6 +337,14 @@ function LeadershipDashboard({
   change: (key: string, value: string) => void;
 }) {
   const [data, setData] = useState<LeadershipSummary | null>(null);
+  const { hash } = useLocation();
+  const ready = !!data;
+  useEffect(() => {
+    if (hash && ready)
+      document
+        .getElementById(hash.slice(1))
+        ?.scrollIntoView({ block: "start" });
+  }, [hash, ready]);
   const [exportError, setExportError] = useState("");
   const load = useCallback(
     async () => setData(await call("leadership.summary", { period }, actor)),
@@ -318,7 +358,7 @@ function LeadershipDashboard({
     if (!data || poll.error) return;
     try {
       setExportError("");
-      const rows = leadershipReport(data, focus);
+      const rows = leadershipReport(data, focus, mode === "demo");
       if (kind === "csv") {
         const url = URL.createObjectURL(
           new Blob([csv(rows)], {
@@ -408,21 +448,20 @@ function LeadershipDashboard({
           </select>
         </label>
         <label>
-          Periode kohor
+          Rentang waktu
           <select
             value={period}
             onChange={(e) => change("periode", e.target.value)}
           >
             <option value="all">Seluruh data</option>
-            <option value="7">7 hari kalender UTC</option>
-            <option value="30">30 hari kalender UTC</option>
+            <option value="7">7 hari terakhir</option>
+            <option value="30">30 hari terakhir</option>
           </select>
         </label>
       </div>
       <small className="leadership-scope">
-        Kohor mencakup permohonan/misi yang dibuat dalam hari kalender UTC
-        terpilih. Kesiapan dan kualitas data memakai snapshot seluruh data.
-        Sudut pantau tidak mengubah hak akses.
+        Rentang dihitung per hari kalender UTC berdasarkan tanggal pembuatan.
+        Kesiapan memakai seluruh data. Sudut pantau tidak mengubah hak akses.
       </small>
       <AsyncState {...poll} reload={() => void poll.refresh()} />
       {poll.error && data && (
@@ -489,10 +528,20 @@ function LeadershipDashboard({
                 <h2>Koordinasi yang perlu dipantau</h2>
                 {issues.length ? (
                   issues.slice(0, 3).map((i) => (
-                    <div key={i.code}>
+                    <Link
+                      className="attention-link"
+                      key={i.code}
+                      to={
+                        "/pimpinan/perhatian?" +
+                        new URLSearchParams({ fokus: focus, periode: period }) +
+                        "#indikator-" +
+                        i.code
+                      }
+                    >
                       <span>{i.label}</span>
                       <strong>{i.count}</strong>
-                    </div>
+                      <ArrowRight size={18} aria-hidden="true" />
+                    </Link>
                   ))
                 ) : (
                   <p>
@@ -618,13 +667,34 @@ function LeadershipDashboard({
               </p>
               {issues.length ? (
                 issues.map((i) => (
-                  <article className="card leadership-attention" key={i.code}>
+                  <article
+                    className="card leadership-attention"
+                    id={"indikator-" + i.code}
+                    key={i.code}
+                  >
                     <div className="leadership-section-title">
                       <h2>{i.label}</h2>
                       <strong>{i.count}</strong>
                     </div>
                     <span className="badge">{i.owner}</span>
                     <p>{i.detail}</p>
+                    <Link
+                      className="indicator-drill"
+                      to={
+                        (i.code === "resource"
+                          ? "/pimpinan/kesiapan"
+                          : "/pimpinan/operasi") +
+                        "?" +
+                        new URLSearchParams({ fokus: focus, periode: period }) +
+                        (i.code === "resource" ? "" : "#tahapan-permohonan")
+                      }
+                    >
+                      Lihat{" "}
+                      {i.code === "resource"
+                        ? "ringkasan kesiapan"
+                        : "distribusi operasional"}{" "}
+                      <ArrowRight size={16} aria-hidden="true" />
+                    </Link>
                   </article>
                 ))
               ) : (

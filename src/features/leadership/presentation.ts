@@ -1,3 +1,4 @@
+import { displayStatus } from "../../lib/presentation";
 import type { LeadershipSummary } from "../../types/leadership";
 export const perspectives = {
   presiden: {
@@ -130,7 +131,11 @@ export function attentionItems(s: LeadershipSummary, includeZero = false) {
     },
   ].filter((item) => includeZero || item.count > 0);
 }
-export function leadershipReport(s: LeadershipSummary, focus: Perspective) {
+export function leadershipReport(
+  s: LeadershipSummary,
+  focus: Perspective,
+  demo = false,
+) {
   const common = {
     simulation: "PROTOTIPE SIMULASI — DATA SINTETIS",
     periode:
@@ -204,7 +209,7 @@ export function leadershipReport(s: LeadershipSummary, focus: Perspective) {
       ),
     ),
     ...s.requestsByStatus.map((item) =>
-      row("Status permohonan", item.label, item.count),
+      row("Status permohonan", displayStatus(item.label, demo), item.count),
     ),
     ...s.missionsByStatus.map((item) =>
       row("Status misi", item.label, item.count),

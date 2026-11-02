@@ -71,7 +71,7 @@ export default function AircraftReportForm({
             if (result.queued) {
               setQueued(true);
               setMessage(
-                "Menunggu jaringan/pengiriman di Outbox. Jangan membuat laporan duplikat.",
+                "Menunggu sinkronisasi di Outbox. Jangan membuat laporan duplikat.",
               );
             } else {
               const report = result as AircraftReportView;
@@ -85,7 +85,7 @@ export default function AircraftReportForm({
               setForm({ ...form, text: "", lat: "", lng: "" });
               setMessage(
                 mode === "demo"
-                  ? "Laporan awak tercatat di demo lokal."
+                  ? "Laporan awak tersimpan di perangkat."
                   : "Laporan awak tercatat di server.",
               );
               await saved();

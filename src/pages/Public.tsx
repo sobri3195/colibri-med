@@ -1,3 +1,4 @@
+import { displayStatus } from "../lib/presentation";
 import { useCallback, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Plane, ShieldCheck, ClipboardList } from "lucide-react";
@@ -202,7 +203,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
         mode + ":" + (actor?.id ?? "public") + ":request",
         form,
       );
-      setNotice("Tersimpan lokal — draft belum dikirim.");
+      setNotice("Tersimpan di perangkat — draft belum dikirim.");
     } catch {
       setNotice("Penyimpanan browser tidak tersedia.");
     }
@@ -247,11 +248,10 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
             await refreshLocal();
             setNotice(
               r.queued
-                ? "Menunggu jaringan — tersimpan di outbox lokal."
-                : "Tercatat di " +
-                    (import.meta.env.VITE_APP_MODE === "connected"
-                      ? "server"
-                      : "penyimpanan demo lokal") +
+                ? "Menunggu sinkronisasi — tersimpan di perangkat."
+                : (mode === "demo"
+                    ? "Tersimpan di perangkat"
+                    : "Tercatat di server") +
                     ". Belum diterima operator dan belum ada penugasan.",
             );
           } catch (e) {
@@ -458,6 +458,29 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
             Gunakan Lokasi Saya
           </button>
         </fieldset>
+        <section
+          className="submission-review"
+          aria-label="Pemeriksaan sebelum pengiriman"
+        >
+          <h2>Periksa sebelum mengirim</h2>
+          <p>
+            Pastikan seluruh informasi sintetis dan isian wajib sudah lengkap.
+          </p>
+          <dl>
+            <div>
+              <dt>Fasilitas asal</dt>
+              <dd>{form.facility || "Belum diisi"}</dd>
+            </div>
+            <div>
+              <dt>Jumlah pasien</dt>
+              <dd>{String(form.patients)}</dd>
+            </div>
+            <div>
+              <dt>Lokasi</dt>
+              <dd>{form.location || "Belum diisi"}</dd>
+            </div>
+          </dl>
+        </section>
         <div className="actions">
           <button disabled={busy || submitted} type="submit">
             {busy ? "Mengirim…" : "Kirim permohonan simulasi"}
@@ -466,7 +489,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
             Simpan draft
           </button>
           <button
-            className="secondary"
+            className="tertiary"
             type="button"
             onClick={async () => {
               try {
@@ -522,13 +545,13 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
         </div>
       )}
       <button
+        className="tertiary"
         disabled={busy}
-        className="secondary"
         onClick={async () => {
           setBusy(true);
           try {
             if (!navigator.onLine) {
-              setNotice("Menunggu jaringan.");
+              setNotice("Menunggu sinkronisasi.");
               return;
             }
             const result = await retry(actor);
@@ -554,7 +577,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
           <h2>Pengiriman tertunda saya</h2>
           {pending.map((p) => (
             <div key={p.operationId}>
-              <strong>{p.status}</strong>
+              <strong>{displayStatus(p.status, mode === "demo")}</strong>
               <small>
                 Operasi {p.operationId.slice(0, 8)} · percobaan {p.retryCount}
               </small>
@@ -598,7 +621,7 @@ export function RequestForm({ actor = null }: { actor?: Actor | null }) {
             <div key={r.operationId}>
               <strong>
                 {mode === "demo"
-                  ? "Tercatat di demo lokal"
+                  ? "Tersimpan di perangkat"
                   : "Tercatat di server"}
               </strong>
               <small>

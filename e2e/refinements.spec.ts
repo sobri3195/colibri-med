@@ -63,7 +63,7 @@ test("two browser tabs preserve a stale review draft and allow archiving its con
     .selectOption("Sedang Dinilai");
   await med.getByRole("button", { name: "Catat penilaian medis" }).click();
   await expect(
-    page.getByText("Perubahan dicatat.", { exact: true }),
+    page.getByRole("status").filter({ hasText: "Tersimpan di perangkat" }),
   ).toBeVisible();
   const second = await context.newPage();
   await login(second);
@@ -100,7 +100,7 @@ test("two browser tabs preserve a stale review draft and allow archiving its con
   const conflict = second.locator("details").filter({
     has: second.locator("summary", { hasText: "Konflik perubahan" }),
   });
-  await conflict.locator("summary").click();
+  await conflict.locator(":scope > summary").click();
   await conflict
     .getByRole("button", { name: "Arsipkan operasi setelah ditinjau" })
     .click();

@@ -201,7 +201,7 @@ export default function OperationalForm({
             onClick={async () => {
               try {
                 await putLocal("drafts", key, { fields, snapshot });
-                notice("Tersimpan lokal");
+                notice("Tersimpan di perangkat");
               } catch (e) {
                 notice(String(e));
               }
