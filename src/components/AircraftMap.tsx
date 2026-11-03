@@ -1,3 +1,4 @@
+import MapControls from "./MapControls";
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -10,9 +11,9 @@ export interface AircraftMarker {
 }
 const helicopterIcon = L.divIcon({
   className: "aircraft-map-icon",
-  iconSize: [42, 42],
-  iconAnchor: [21, 21],
-  html: '<svg viewBox="0 0 48 48" width="42" height="42" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="#12324b" stroke="#fff" stroke-width="2"/><g fill="none" stroke="#b1e4d6" stroke-width="2.5" stroke-linecap="round"><path d="M12 13h24M24 13v7M17 34h16M20 30v4M30 29v5M15 24l-5-4v10l5-2"/><path d="M15 21h12c6 0 10 4 10 7H16z"/><path d="M29 22v6"/></g></svg>',
+  iconSize: [48, 48],
+  iconAnchor: [24, 24],
+  html: '<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="#12324b" stroke="#fff" stroke-width="2"/><g fill="none" stroke="#b1e4d6" stroke-width="2.5" stroke-linecap="round"><path d="M12 13h24M24 13v7M17 34h16M20 30v4M30 29v5M15 24l-5-4v10l5-2"/><path d="M15 21h12c6 0 10 4 10 7H16z"/><path d="M29 22v6"/></g></svg>',
 });
 export default function AircraftMap({
   aircraft,
@@ -32,16 +33,34 @@ export default function AircraftMap({
   const selectRef = useRef(select);
   selectRef.current = select;
   const [failed, setFailed] = useState(false);
+  const tiles = useRef<L.TileLayer | null>(null);
+  const focus = () => {
+    const marker = markers.current.get(selected);
+    if (marker) mapRef.current?.panTo(marker.getLatLng());
+  };
+  const fit = () => {
+    const points = aircraft
+      .filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng))
+      .map((a) => L.latLng(a.lat, a.lng));
+    if (points.length)
+      mapRef.current?.fitBounds(L.latLngBounds(points), {
+        padding: [36, 36],
+        maxZoom: 13,
+      });
+  };
   useEffect(() => {
     if (!element.current) return;
     const map = L.map(element.current).setView([-6.25, 106.88], 12);
     mapRef.current = map;
     trails.current = L.layerGroup().addTo(map);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 18,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
-    })
+    tiles.current = L.tileLayer(
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 18,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+      },
+    )
       .on("tileerror", () => setFailed(true))
       .addTo(map);
     return () => {
@@ -62,6 +81,7 @@ export default function AircraftMap({
       }
     for (const a of aircraft) {
       let marker = markers.current.get(a.id);
+      if (!Number.isFinite(a.lat) || !Number.isFinite(a.lng)) continue;
       if (!marker) {
         marker = L.marker([a.lat, a.lng], {
           icon: helicopterIcon,
@@ -82,6 +102,14 @@ export default function AircraftMap({
           "aria-label",
           a.name + (a.id === selected ? " — dipilih" : "") + " — simulasi",
         );
+      if (a.id === selected)
+        marker.bindTooltip(
+          Object.assign(document.createElement("span"), {
+            textContent: a.name,
+          }),
+          { permanent: true, direction: "top", offset: [0, -22] },
+        );
+      else marker.unbindTooltip();
       marker.bindPopup(
         Object.assign(document.createElement("span"), {
           textContent:
@@ -112,21 +140,31 @@ export default function AircraftMap({
         ref={element}
         aria-label="Peta helikopter simulasi"
       />
-      <div className="map-legend" aria-label="Legenda peta">
+      <MapControls focus={focus} fit={fit}>
         <span>
           <i aria-hidden="true" />
-          Posisi laporan
+          Helikopter · posisi laporan
         </span>
         <span>
           <i className="selected" aria-hidden="true" />
-          Helikopter dipilih
+          Pilihan aktif
         </span>
         {playback && <span>Garis putus-putus: ilustrasi simulasi</span>}
-      </div>
+      </MapControls>
       {failed && (
         <p role="status" className="notice">
           Tile peta tidak tersedia. Daftar koordinat, kontrol simulasi, dan
-          laporan tetap dapat digunakan.
+          laporan tetap dapat digunakan.{" "}
+          <button
+            type="button"
+            className="tertiary"
+            onClick={() => {
+              setFailed(false);
+              tiles.current?.redraw();
+            }}
+          >
+            Coba muat peta
+          </button>
         </p>
       )}
       <small>

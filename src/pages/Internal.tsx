@@ -1,3 +1,4 @@
+import MissionOverview from "../components/MissionOverview";
 import { PageHeading, FilterBar, Field } from "../components/DesignSystem";
 import BrandMark from "../components/BrandMark";
 import {
@@ -660,6 +661,11 @@ export default function Internal({
                   {mission && (
                     <div className="inset">
                       <h3>Misi · {mission.status}</h3>
+                      <MissionOverview
+                        mission={mission}
+                        request={request}
+                        tables={data}
+                      />
                       <p className="record-reference">
                         Misi {mission.id.slice(0, 8)} · Diperbarui{" "}
                         {date(mission.updatedAt)}
@@ -670,8 +676,7 @@ export default function Internal({
                         {String(request.location)}
                       </p>
                       <p className="muted">
-                        Jadwal dan tujuan penerbangan tidak tersedia pada record
-                        misi ini.
+                        Jadwal penerbangan tidak tersedia pada record misi ini.
                       </p>
                       <details className="mission-history">
                         <summary>Riwayat tahapan tercatat</summary>

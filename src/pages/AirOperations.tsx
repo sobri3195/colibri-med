@@ -19,6 +19,12 @@ import {
   RefreshCw,
   RotateCcw,
   ShieldCheck,
+  MapPin,
+  MessageSquare,
+  TriangleAlert,
+  CircleCheck,
+  Check,
+  Search,
 } from "lucide-react";
 import type { Actor } from "../types";
 import type { AviationSnapshot } from "../types/aviation";
@@ -88,11 +94,35 @@ export default function AirOperations({
   mobile?: boolean;
 }) {
   const location = useLocation();
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
   const [params, setParams] = useSearchParams();
   const [snapshot, setSnapshot] = useState<AviationSnapshot | null>(null);
   const [running, setRunning] = useState(false);
+  const [airSearch, setAirSearch] = useState("");
+  const [airStatus, setAirStatus] = useState("");
+  const [reducedMotion, setReducedMotion] = useState(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const change = () => {
+      setReducedMotion(mq.matches);
+      if (mq.matches) setRunning(false);
+    };
+    mq.addEventListener("change", change);
+    return () => mq.removeEventListener("change", change);
+  }, []);
   const [detailsOpen, setDetailsOpen] = useState(
-    () => !mobile || window.matchMedia("(min-width: 1100px)").matches,
+    () => window.matchMedia("(min-width: 1100px)").matches,
   );
   const [tick, setTick] = useState(0);
   const [category, setCategory] = useState("all");
@@ -109,6 +139,26 @@ export default function AirOperations({
   const aircraft = snapshot?.aircraft ?? [];
   const selected = params.get("aircraft") ?? aircraft[0]?.id ?? "";
   const current = aircraft.find((a) => a.id === selected);
+  const visibleAircraft = aircraft.filter(
+    (a) =>
+      (!airStatus || a.status === airStatus) &&
+      (a.name + " " + a.demoCode)
+        .toLowerCase()
+        .includes(airSearch.toLowerCase()),
+  );
+  const latestReports = (snapshot?.reports ?? [])
+    .filter((r) => r.aircraftId === selected)
+    .slice()
+    .sort((a, b) => b.reportedAt.localeCompare(a.reportedAt));
+  const relatedMissions = (snapshot?.missions ?? []).filter(
+    (m) =>
+      m.id === current?.missionId ||
+      latestReports.some((r) => r.missionId === m.id),
+  );
+  const resetReports = () => {
+    setSearch("");
+    setCategory("all");
+  };
   const select = (id: string) => {
     const next = new URLSearchParams(params);
     next.set("aircraft", id);
@@ -199,6 +249,12 @@ export default function AirOperations({
           Ruang koordinasi <ArrowRight size={15} />
         </Link>
       </nav>
+      {!online && (
+        <p role="status" className="notice">
+          Perangkat offline. Data tersimpan tetap dapat dibaca; peta dasar
+          memerlukan tile yang tersedia.
+        </p>
+      )}
       <AsyncState {...poll} reload={() => void poll.refresh()} />
       {poll.error && snapshot && (
         <p role="status" className="notice">
@@ -206,17 +262,6 @@ export default function AirOperations({
           beralih ke data demo.
         </p>
       )}
-      <details className="notice air-simulation">
-        <summary>
-          <ShieldCheck size={18} aria-hidden="true" /> Simulasi data sintetis ·
-          tanpa pelacakan langsung
-        </summary>
-        <p>
-          Tidak terhubung GPS, ADS-B, sensor, atau armada nyata. Animasi hanya
-          ilustrasi lokal dan tidak mengubah data posisi yang dilaporkan, izin
-          penerbangan, atau status misi.
-        </p>
-      </details>
       {snapshot && (
         <>
           {aircraft.length === 0 ? (
@@ -229,22 +274,71 @@ export default function AirOperations({
             </section>
           ) : (
             <>
-              <label className="air-selector">
-                Pilih helikopter sintetis
-                <select
-                  value={current?.id ?? ""}
-                  onChange={(e) => select(e.target.value)}
-                >
-                  <option value="" disabled>
-                    Pilih helikopter
-                  </option>
-                  {aircraft.map((a) => (
-                    <option value={a.id} key={a.id}>
-                      {a.demoCode} · {a.name} · {a.status}
+              <div className="air-object-toolbar">
+                <details className="air-object-filters">
+                  <summary>
+                    <Search size={16} /> Cari & filter helikopter
+                  </summary>
+                  <div>
+                    {" "}
+                    <label>
+                      Cari helikopter
+                      <input
+                        value={airSearch}
+                        onChange={(e) => setAirSearch(e.target.value)}
+                        placeholder="Kode atau nama helikopter"
+                      />
+                    </label>
+                    <label>
+                      Status tercatat
+                      <select
+                        value={airStatus}
+                        onChange={(e) => setAirStatus(e.target.value)}
+                      >
+                        <option value="">Semua status</option>
+                        {[...new Set(aircraft.map((a) => a.status))].map(
+                          (status) => (
+                            <option key={status}>{status}</option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                  </div>
+                </details>
+                <label className="air-selector">
+                  Pilih helikopter sintetis
+                  <select
+                    value={current?.id ?? ""}
+                    onChange={(e) => select(e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Pilih helikopter
                     </option>
-                  ))}
-                </select>
-              </label>
+                    {aircraft.map((a) => (
+                      <option value={a.id} key={a.id}>
+                        {a.demoCode} · {a.name} · {a.status}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {(airSearch || airStatus) && (
+                <p role="status" className="air-filter-result">
+                  {visibleAircraft.length} helikopter sesuai filter.{" "}
+                  <button
+                    className="tertiary"
+                    onClick={() => {
+                      setAirSearch("");
+                      setAirStatus("");
+                    }}
+                  >
+                    Reset filter helikopter
+                  </button>
+                  {current &&
+                    !visibleAircraft.some((a) => a.id === current.id) &&
+                    " Pilihan saat ini berada di luar filter; detail tersimpan tetap ditampilkan."}
+                </p>
+              )}
               {!current && (
                 <p role="alert" className="error">
                   Helikopter yang dipilih tidak ditemukan. Pilih record lain;
@@ -258,15 +352,24 @@ export default function AirOperations({
                       <h2>Peta pemantauan simulasi</h2>
                       <span className="badge">
                         {running || tick
-                          ? "Posisi ilustrasi playback"
-                          : "Posisi dilaporkan sintetis"}
+                          ? "Animasi simulasi"
+                          : "Posisi berdasarkan laporan sintetis."}
                       </span>
                     </div>
+                    <AircraftMap
+                      aircraft={markers.filter((m) =>
+                        visibleAircraft.some((a) => a.id === m.id),
+                      )}
+                      selected={selected}
+                      select={select}
+                      playback={running || tick > 0}
+                    />
                     <div className="actions">
                       <button
-                        disabled={aircraft.every(
-                          (a) => a.trainingPath.length < 2,
-                        )}
+                        disabled={
+                          reducedMotion ||
+                          aircraft.every((a) => a.trainingPath.length < 2)
+                        }
                         onClick={() => setRunning((r) => !r)}
                       >
                         {running ? <Pause size={16} /> : <Play size={16} />}{" "}
@@ -285,6 +388,12 @@ export default function AirOperations({
                         Reset ke posisi laporan
                       </button>
                     </div>
+                    {reducedMotion && (
+                      <small>
+                        Animasi dinonaktifkan mengikuti preferensi pengurangan
+                        gerakan.
+                      </small>
+                    )}
                     <p role="status" className="air-playback-status">
                       {running
                         ? "Animasi lokal berjalan; bukan posisi aktual."
@@ -292,12 +401,6 @@ export default function AirOperations({
                           ? "Animasi dijeda; posisi ilustrasi tetap ditampilkan."
                           : "Animasi nonaktif; memakai posisi laporan terakhir."}
                     </p>
-                    <AircraftMap
-                      aircraft={markers}
-                      selected={selected}
-                      select={select}
-                      playback={running || tick > 0}
-                    />
                     {current && (
                       <div className="air-selected-summary">
                         <span className="eyebrow">{current.demoCode}</span>
@@ -335,55 +438,152 @@ export default function AirOperations({
                     open={detailsOpen}
                     onToggle={(e) => setDetailsOpen(e.currentTarget.open)}
                   >
-                    <summary>Detail & posisi helikopter</summary>
-                    <section
-                      className="aircraft-list"
-                      aria-label="Daftar helikopter sintetis"
-                    >
-                      {aircraft.map((a) => {
-                        const marker = markers.find((m) => m.id === a.id)!;
-                        return (
-                          <article
-                            className={
-                              selected === a.id
-                                ? "card aircraft-card selected"
-                                : "card aircraft-card"
-                            }
-                            key={a.id}
-                          >
-                            <div>
-                              <span className="eyebrow">{a.demoCode}</span>
-                              <StatusBadge status={a.status} />
-                            </div>
-                            <h2>{a.name}</h2>
-                            <p data-testid={"position-" + a.demoCode}>
-                              {running || tick
-                                ? "Ilustrasi: "
-                                : "Posisi laporan: "}
-                              {marker.lat.toFixed(5)}, {marker.lng.toFixed(5)}
+                    <summary>
+                      <span>Detail & posisi helikopter</span>
+                      <span className="sheet-action">
+                        {detailsOpen ? "Tutup detail" : "Buka detail"}
+                      </span>
+                    </summary>
+                    <div className="sheet-content">
+                      {current && (
+                        <section
+                          className="selected-air-detail"
+                          aria-label="Ringkasan helikopter terpilih"
+                        >
+                          <span className="eyebrow">
+                            {current.demoCode} · Dipilih
+                          </span>
+                          <h2>{current.name}</h2>
+                          <StatusBadge status={current.status} />
+                          <p>
+                            Posisi dicatat:{" "}
+                            {current.positionReportedAt
+                              ? date(current.positionReportedAt)
+                              : "Belum ada laporan posisi"}
+                          </p>
+                          <details>
+                            <summary>Koordinat laporan tersimpan</summary>
+                            <p>
+                              {current.lat.toFixed(5)}, {current.lng.toFixed(5)}
                             </p>
-                            <small>
-                              Posisi laporan tersimpan: {a.lat.toFixed(5)},{" "}
-                              {a.lng.toFixed(5)}
+                          </details>
+                          <h3>Laporan awak terbaru</h3>
+                          {latestReports[0] ? (
+                            <p>
+                              {latestReports[0].category} ·{" "}
+                              {date(latestReports[0].reportedAt)}
                               <br />
-                              Posisi dicatat:{" "}
-                              {a.positionReportedAt
-                                ? date(a.positionReportedAt)
-                                : "Belum tersedia"}
-                            </small>
-                            <button
-                              className="secondary"
-                              onClick={() => select(a.id)}
+                              {latestReports[0].text}
+                            </p>
+                          ) : (
+                            <p>Belum ada laporan awak.</p>
+                          )}
+                          <Link className="button secondary" to={link(true)}>
+                            Buka laporan lengkap <ArrowRight size={16} />
+                          </Link>
+                          <h3>Misi terkait</h3>
+                          {relatedMissions.length ? (
+                            relatedMissions.map((m) => (
+                              <p key={m.id}>
+                                Misi {m.id.slice(0, 8)} ·{" "}
+                                <StatusBadge status={m.status} />
+                              </p>
+                            ))
+                          ) : (
+                            <p>
+                              Belum ada misi terkait pada data yang tersedia.
+                            </p>
+                          )}
+                          {relatedMissions.length > 0 && (
+                            <Link
+                              to={mobile ? "/mobile/misi" : "/internal/misi"}
                             >
-                              Pilih {a.demoCode}
-                            </button>
-                          </article>
-                        );
-                      })}
-                    </section>
+                              Buka daftar misi →
+                            </Link>
+                          )}
+                        </section>
+                      )}
+                      <p className="air-list-hint">
+                        Pilih helikopter lain · daftar dapat digeser pada
+                        ponsel.
+                      </p>
+                      <section
+                        className="aircraft-list"
+                        aria-label="Daftar helikopter sintetis"
+                      >
+                        {visibleAircraft.map((a) => {
+                          const marker = markers.find((m) => m.id === a.id)!;
+                          return (
+                            <article
+                              className={
+                                selected === a.id
+                                  ? "card aircraft-card selected"
+                                  : "card aircraft-card"
+                              }
+                              key={a.id}
+                            >
+                              <div>
+                                <span className="eyebrow">{a.demoCode}</span>
+                                <StatusBadge status={a.status} />
+                              </div>
+                              <h2>{a.name}</h2>
+                              {selected === a.id && (
+                                <span className="record-selected">
+                                  <Check size={16} /> Dipilih
+                                </span>
+                              )}
+                              <p data-testid={"position-" + a.demoCode}>
+                                {running || tick
+                                  ? "Ilustrasi: "
+                                  : "Posisi laporan: "}
+                                {marker.lat.toFixed(5)}, {marker.lng.toFixed(5)}
+                              </p>
+                              <small>
+                                Posisi dicatat:{" "}
+                                {a.positionReportedAt
+                                  ? date(a.positionReportedAt)
+                                  : "Belum tersedia"}
+                              </small>
+                              <button
+                                className="secondary"
+                                aria-pressed={selected === a.id}
+                                onClick={() => select(a.id)}
+                              >
+                                Pilih {a.demoCode}
+                              </button>
+                            </article>
+                          );
+                        })}
+                      </section>
+                      {!visibleAircraft.length && (
+                        <p>
+                          Tidak ada helikopter sesuai filter.{" "}
+                          <button
+                            className="tertiary"
+                            onClick={() => {
+                              setAirSearch("");
+                              setAirStatus("");
+                            }}
+                          >
+                            Reset filter helikopter
+                          </button>
+                        </p>
+                      )}
+                    </div>
                   </details>
                 </div>
               )}
+              <details className="notice air-simulation">
+                <summary>
+                  <ShieldCheck size={18} aria-hidden="true" /> Data sintetis ·
+                  informasi simulasi
+                </summary>
+                <p>
+                  Tidak terhubung GPS, ADS-B, sensor, atau armada nyata. Animasi
+                  hanya ilustrasi lokal dan tidak mengubah data posisi yang
+                  dilaporkan, izin penerbangan, atau status misi.
+                </p>
+              </details>
               <div className="air-summary">
                 <article>
                   <Plane size={20} />
@@ -436,32 +636,63 @@ export default function AirOperations({
                       </select>
                     </label>
                   </div>
+                  <button
+                    className="tertiary"
+                    onClick={resetReports}
+                    disabled={!search && category === "all"}
+                  >
+                    Reset filter laporan
+                  </button>
                   {reports.length ? (
-                    reports.slice(0, limit).map((r) => (
-                      <article className="air-report" key={r.id}>
-                        <div>
-                          <span className="badge">{r.category}</span>
+                    reports
+                      .slice()
+                      .sort((a, b) => b.reportedAt.localeCompare(a.reportedAt))
+                      .slice(0, limit)
+                      .map((r) => (
+                        <article className="air-report" key={r.id}>
+                          <div>
+                            <span className="badge">
+                              {r.category === "Posisi" ? (
+                                <MapPin size={16} />
+                              ) : r.category === "Kendala" ? (
+                                <TriangleAlert size={16} />
+                              ) : r.category === "Laporan akhir" ? (
+                                <CircleCheck size={16} />
+                              ) : (
+                                <MessageSquare size={16} />
+                              )}{" "}
+                              {r.category}
+                            </span>
+                            <small>
+                              {r.reportedAt
+                                ? date(r.reportedAt)
+                                : "Waktu tidak tersedia"}
+                            </small>
+                          </div>
+                          <h3>{r.aircraftStatus}</h3>
+                          <p>{r.text}</p>
                           <small>
-                            {r.reportedAt
-                              ? date(r.reportedAt)
-                              : "Waktu tidak tersedia"}
+                            {r.positionSupplied
+                              ? "Koordinat baru dilaporkan: "
+                              : "Memakai posisi sebelumnya: "}
+                            {r.lat.toFixed(5)}, {r.lng.toFixed(5)} ·{" "}
+                            {r.missionId
+                              ? "Misi " + r.missionId.slice(0, 8)
+                              : "Latihan tanpa misi"}
                           </small>
-                        </div>
-                        <h3>{r.aircraftStatus}</h3>
-                        <p>{r.text}</p>
-                        <small>
-                          {r.positionSupplied
-                            ? "Koordinat baru dilaporkan: "
-                            : "Memakai posisi sebelumnya: "}
-                          {r.lat.toFixed(5)}, {r.lng.toFixed(5)} ·{" "}
-                          {r.missionId
-                            ? "Misi " + r.missionId.slice(0, 8)
-                            : "Latihan tanpa misi"}
-                        </small>
-                      </article>
-                    ))
+                        </article>
+                      ))
                   ) : (
-                    <p className="empty">Belum ada laporan sesuai filter.</p>
+                    <div className="coord-empty">
+                      <h3>Belum ada laporan sesuai filter.</h3>
+                      <p>
+                        Ubah kata kunci atau jenis laporan untuk melihat catatan
+                        tersimpan.
+                      </p>
+                      <button className="secondary" onClick={resetReports}>
+                        Tampilkan semua laporan
+                      </button>
+                    </div>
                   )}
                   {reports.length > limit && (
                     <button
