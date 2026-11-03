@@ -1,0 +1,405 @@
+[
+  {
+    "name": "public",
+    "width": 390,
+    "height": 844,
+    "header": {
+      "top": 46,
+      "height": 140,
+      "width": 390,
+      "bottom": 186
+    },
+    "status": {
+      "top": 0,
+      "height": 46,
+      "width": 390,
+      "bottom": 46
+    },
+    "heading": null,
+    "toolbar": null,
+    "list": null,
+    "map": null,
+    "detail": null,
+    "form": null,
+    "pageHeight": 2944
+  },
+  {
+    "name": "login",
+    "width": 390,
+    "height": 844,
+    "header": null,
+    "status": {
+      "top": 0,
+      "height": 46,
+      "width": 390,
+      "bottom": 46
+    },
+    "heading": null,
+    "toolbar": null,
+    "list": null,
+    "map": null,
+    "detail": null,
+    "form": null,
+    "pageHeight": 1622
+  },
+  {
+    "name": "requests",
+    "width": 390,
+    "height": 844,
+    "header": {
+      "top": 46,
+      "height": 86,
+      "width": 390,
+      "bottom": 132
+    },
+    "status": {
+      "top": 136,
+      "height": 50,
+      "width": 350,
+      "bottom": 185
+    },
+    "heading": {
+      "top": 265,
+      "height": 160,
+      "width": 350,
+      "bottom": 425
+    },
+    "toolbar": {
+      "top": 449,
+      "height": 268,
+      "width": 350,
+      "bottom": 717
+    },
+    "list": {
+      "top": 735,
+      "height": 632,
+      "width": 350,
+      "bottom": 1367
+    },
+    "map": null,
+    "detail": null,
+    "form": null,
+    "pageHeight": 1535
+  },
+  {
+    "name": "aircraft",
+    "width": 390,
+    "height": 844,
+    "header": {
+      "top": 46,
+      "height": 74,
+      "width": 390,
+      "bottom": 120
+    },
+    "status": {
+      "top": 120,
+      "height": 42,
+      "width": 350,
+      "bottom": 161
+    },
+    "heading": {
+      "top": 217,
+      "height": 94,
+      "width": 350,
+      "bottom": 311
+    },
+    "toolbar": {
+      "top": 382,
+      "height": 144,
+      "width": 350,
+      "bottom": 526
+    },
+    "list": null,
+    "map": {
+      "top": 614,
+      "height": 310,
+      "width": 324,
+      "bottom": 924
+    },
+    "detail": {
+      "top": 1618,
+      "height": 90,
+      "width": 350,
+      "bottom": 1708
+    },
+    "form": null,
+    "pageHeight": 4158
+  },
+  {
+    "name": "facilities",
+    "width": 390,
+    "height": 844,
+    "header": {
+      "top": 46,
+      "height": 86,
+      "width": 390,
+      "bottom": 132
+    },
+    "status": {
+      "top": 136,
+      "height": 50,
+      "width": 350,
+      "bottom": 185
+    },
+    "heading": {
+      "top": 209,
+      "height": 160,
+      "width": 350,
+      "bottom": 369
+    },
+    "toolbar": {
+      "top": 393,
+      "height": 268,
+      "width": 350,
+      "bottom": 661
+    },
+    "list": null,
+    "map": {
+      "top": 830,
+      "height": 380,
+      "width": 308,
+      "bottom": 1210
+    },
+    "detail": null,
+    "form": null,
+    "pageHeight": 2899
+  },
+  {
+    "name": "form",
+    "width": 390,
+    "height": 844,
+    "header": {
+      "top": 46,
+      "height": 86,
+      "width": 390,
+      "bottom": 132
+    },
+    "status": {
+      "top": 136,
+      "height": 50,
+      "width": 350,
+      "bottom": 185
+    },
+    "heading": null,
+    "toolbar": null,
+    "list": null,
+    "map": {
+      "top": 1836,
+      "height": 380,
+      "width": 308,
+      "bottom": 2216
+    },
+    "detail": null,
+    "form": {
+      "top": 257,
+      "height": 2877,
+      "width": 350,
+      "bottom": 3134
+    },
+    "pageHeight": 3303
+  },
+  {
+    "name": "public",
+    "width": 1366,
+    "height": 768,
+    "header": {
+      "top": 28,
+      "height": 80,
+      "width": 1366,
+      "bottom": 108
+    },
+    "status": {
+      "top": 0,
+      "height": 28,
+      "width": 1366,
+      "bottom": 28
+    },
+    "heading": null,
+    "toolbar": null,
+    "list": null,
+    "map": null,
+    "detail": null,
+    "form": null,
+    "pageHeight": 1828
+  },
+  {
+    "name": "login",
+    "width": 1366,
+    "height": 768,
+    "header": null,
+    "status": {
+      "top": 0,
+      "height": 28,
+      "width": 1366,
+      "bottom": 28
+    },
+    "heading": null,
+    "toolbar": null,
+    "list": null,
+    "map": null,
+    "detail": null,
+    "form": null,
+    "pageHeight": 986
+  },
+  {
+    "name": "requests",
+    "width": 1366,
+    "height": 768,
+    "header": {
+      "top": 28,
+      "height": 80,
+      "width": 1366,
+      "bottom": 108
+    },
+    "status": {
+      "top": 0,
+      "height": 28,
+      "width": 1366,
+      "bottom": 28
+    },
+    "heading": {
+      "top": 140,
+      "height": 142,
+      "width": 1064,
+      "bottom": 283
+    },
+    "toolbar": {
+      "top": 345,
+      "height": 122,
+      "width": 1064,
+      "bottom": 467
+    },
+    "list": {
+      "top": 505,
+      "height": 490,
+      "width": 444,
+      "bottom": 994
+    },
+    "map": null,
+    "detail": {
+      "top": 505,
+      "height": 1457,
+      "width": 600,
+      "bottom": 1962
+    },
+    "form": null,
+    "pageHeight": 2148
+  },
+  {
+    "name": "aircraft",
+    "width": 1366,
+    "height": 768,
+    "header": {
+      "top": 28,
+      "height": 86,
+      "width": 1078,
+      "bottom": 114
+    },
+    "status": {
+      "top": 118,
+      "height": 50,
+      "width": 1038,
+      "bottom": 167
+    },
+    "heading": {
+      "top": 247,
+      "height": 113,
+      "width": 1038,
+      "bottom": 361
+    },
+    "toolbar": {
+      "top": 433,
+      "height": 130,
+      "width": 1038,
+      "bottom": 563
+    },
+    "list": null,
+    "map": {
+      "top": 620,
+      "height": 384,
+      "width": 624,
+      "bottom": 1004
+    },
+    "detail": {
+      "top": 563,
+      "height": 1195,
+      "width": 360,
+      "bottom": 1758
+    },
+    "form": null,
+    "pageHeight": 3443
+  },
+  {
+    "name": "facilities",
+    "width": 1366,
+    "height": 768,
+    "header": {
+      "top": 28,
+      "height": 80,
+      "width": 1366,
+      "bottom": 108
+    },
+    "status": {
+      "top": 0,
+      "height": 28,
+      "width": 1366,
+      "bottom": 28
+    },
+    "heading": {
+      "top": 140,
+      "height": 142,
+      "width": 1064,
+      "bottom": 283
+    },
+    "toolbar": {
+      "top": 307,
+      "height": 122,
+      "width": 1064,
+      "bottom": 429
+    },
+    "list": null,
+    "map": {
+      "top": 540,
+      "height": 340,
+      "width": 1014,
+      "bottom": 880
+    },
+    "detail": null,
+    "form": null,
+    "pageHeight": 1866
+  },
+  {
+    "name": "form",
+    "width": 1366,
+    "height": 768,
+    "header": {
+      "top": 28,
+      "height": 86,
+      "width": 1078,
+      "bottom": 114
+    },
+    "status": {
+      "top": 118,
+      "height": 50,
+      "width": 1038,
+      "bottom": 167
+    },
+    "heading": null,
+    "toolbar": null,
+    "list": null,
+    "map": {
+      "top": 1345,
+      "height": 380,
+      "width": 988,
+      "bottom": 1725
+    },
+    "detail": null,
+    "form": {
+      "top": 239,
+      "height": 2248,
+      "width": 1038,
+      "bottom": 2487
+    },
+    "pageHeight": 2586
+  }
+]

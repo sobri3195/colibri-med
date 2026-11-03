@@ -100,11 +100,11 @@ export default function RecordTable({
                 {onOpen && (
                   <button
                     className="secondary"
+                    aria-label={"Lihat detail " + r.id.slice(0, 8)}
                     aria-expanded={r.id === selectedId}
                     onClick={() => onOpen(r)}
                   >
-                    Lihat detail {r.id.slice(0, 8)}{" "}
-                    <ArrowRight size={16} aria-hidden="true" />
+                    Lihat detail <ArrowRight size={16} aria-hidden="true" />
                   </button>
                 )}
               </article>

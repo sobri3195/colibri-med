@@ -41,8 +41,14 @@ export default function AircraftReportForm({
   const key = outboxOwner(actor) + ":aircraft-report:" + aircraft.id;
   const changed = aircraft.revision !== snapshot.revision;
   return (
-    <section className="card aircraft-report-form">
+    <section
+      className="card aircraft-report-form"
+      aria-label={"Pencatatan laporan " + aircraft.demoCode}
+    >
       <h2>Catat laporan awak — simulasi</h2>
+      <small>
+        {aircraft.demoCode} · {aircraft.name}
+      </small>
       <p>
         Laporan operasional nonklinis yang dicatat petugas. Jangan masukkan
         identitas pasien. Tidak ada keputusan medis atau persetujuan penerbangan

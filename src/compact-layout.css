@@ -1,0 +1,479 @@
+/* Work surfaces prioritize task content; landing and login retain their identities. */
+.app-shell main {
+  max-width: 1280px;
+}
+.app-shell .hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.app-shell .air-home-hero {
+  padding: 36px;
+}
+.app-shell .hero-copy h1 {
+  font-size: clamp(30px, 4vw, 48px);
+}
+.app-shell .explore-title {
+  margin: 28px 0 12px;
+}
+.app-shell .index-admin {
+  padding: 20px;
+  background: #fff;
+}
+.app-shell .index-admin h2 {
+  font-size: 18px;
+}
+.app-shell .index-admin p {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.app-shell .public-workflow ol {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  padding: 0;
+  margin: 20px 0;
+}
+.app-shell .public-workflow li {
+  font-size: 14px;
+}
+.app-shell .public-workflow li span {
+  display: block;
+  color: #087f8c;
+  font-size: 20px;
+  font-weight: 750;
+  margin-bottom: 8px;
+}
+.app-shell .public-workflow p {
+  color: #526579;
+}
+.app-shell.work-app > .simulation {
+  display: none;
+}
+.app-shell.work-app main {
+  padding-top: 20px;
+}
+.app-shell.work-app > header {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.app-shell.work-app .mobile-header {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-radius: 0 0 16px 16px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.app-shell.work-app .mobile-header .brand {
+  flex: 1;
+}
+.app-shell.work-app .mobile-header .mobile-connection {
+  order: 3;
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0;
+  gap: 8px;
+  justify-content: flex-start;
+  min-height: 24px;
+  color: #d9e2ec;
+  font-size: 12px;
+}
+.app-shell.work-app .mobile-header .mode-chip {
+  margin-left: 4px;
+}
+.app-shell.work-app .mobile-header .mobile-connection > a {
+  color: #b9e8e4;
+}
+.app-shell.work-app .mobile-content {
+  padding-top: 16px;
+}
+.app-shell.work-app .page-heading {
+  color: #172b4d;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0 0 12px;
+  border-radius: 0;
+  gap: 12px;
+  align-items: center;
+}
+.app-shell.work-app .page-heading h1 {
+  color: #102a43;
+  font-size: 28px;
+  margin: 0 0 4px;
+}
+.app-shell.work-app .page-heading :is(.eyebrow, small) {
+  color: #526579;
+}
+.app-shell.work-app .page-heading .eyebrow {
+  display: none;
+}
+.app-shell.work-app .page-heading button.secondary {
+  background: white;
+  color: #102a43;
+  border-color: #d9e2ec;
+}
+.app-shell .page-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.app-shell.work-app .toolbar {
+  margin: 0 0 12px;
+  padding: 12px;
+  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+}
+.app-shell.work-app .toolbar .design-field {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.app-shell.work-app .toolbar button {
+  flex: 0 0 auto;
+}
+.app-shell.work-app .workspace-content {
+  min-width: 0;
+}
+.app-shell .async-indicator {
+  min-height: 24px;
+  font-size: 12px;
+  color: #526579;
+  line-height: 24px;
+  margin: 0;
+}
+.app-shell.work-app .async-indicator {
+  height: 24px;
+}
+.app-shell.work-app .request-list-panel {
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.app-shell.work-app .request-list-panel > h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+.app-shell.work-app .mobile-record {
+  padding: 16px;
+  border-radius: 16px;
+}
+.app-shell.work-app .mobile-record > div:first-child > strong {
+  font-size: 16px;
+}
+.app-shell.work-app .mobile-record small {
+  font-size: 12px;
+}
+.app-shell.work-app .mobile-record button {
+  margin-top: 8px;
+}
+.app-shell.work-app .air-tabs {
+  margin: 0 0 8px;
+}
+.app-shell.work-app .air-object-toolbar {
+  padding: 0 0 8px;
+  gap: 8px;
+}
+.app-shell.work-app .air-object-toolbar .air-selector {
+  background: transparent;
+  padding: 0;
+}
+.app-shell.work-app .air-map-card .air-map-heading h2 {
+  font-size: 18px;
+  margin-bottom: 0;
+}
+.app-shell.work-app .air-map-card .aircraft-map {
+  margin: 0;
+}
+.app-shell.work-app .air-map-card {
+  padding: 12px;
+}
+.app-shell.work-app .air-map-card .air-map-heading {
+  margin-bottom: 8px;
+}
+.app-shell.work-app .air-map-card .air-map-heading .badge {
+  font-size: 11px;
+}
+.app-shell.work-app .facility-workspace {
+  padding: 12px;
+}
+.app-shell.work-app .facility-map-area {
+  min-width: 0;
+}
+.app-shell.work-app .facility-map-area .map {
+  margin-top: 8px;
+  height: 420px;
+}
+.app-shell.work-app .facility-side-panel {
+  border: 1px solid #d9e2ec;
+  border-radius: 16px;
+  padding: 12px;
+  min-width: 0;
+}
+.app-shell.work-app .facility-side-panel > h2 {
+  display: none;
+}
+.app-shell.work-app .facility-side-panel .table-wrap table {
+  min-width: 0;
+}
+.app-shell.work-app .facility-side-panel .table-wrap {
+  overflow-x: auto;
+}
+.app-shell .request-page > p {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.app-shell .request-page .form-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  padding-bottom: 8px;
+}
+.app-shell .request-page .form-section legend {
+  font-size: 18px;
+}
+.app-shell .request-page form > .actions {
+  margin-bottom: 8px;
+}
+.app-shell .login-intro-copy {
+  margin-top: 32px;
+}
+.app-shell .login-role-copy strong {
+  word-break: normal;
+  overflow-wrap: anywhere;
+  hyphens: none;
+}
+.app-shell .login-role {
+  align-items: center;
+}
+.app-shell .login-panel .login-enter {
+  margin-top: 16px;
+}
+@media (min-width: 1100px) {
+  .app-shell.work-app .mobile-header .mobile-connection {
+    flex-basis: auto;
+    order: 0;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .app-shell.work-app.coordination-app .mobile-shell {
+    padding-bottom: 24px;
+  }
+  .app-shell.work-app .workspace:not(.compact-workspace) {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 24px;
+  }
+  .app-shell.work-app .workspace-content:has(.request-list-panel) {
+    display: block !important;
+  }
+  .app-shell.work-app
+    .workspace-content:has(.request-list-panel):has(#request-workspace) {
+    display: grid !important;
+    grid-template-columns: minmax(280px, 0.95fr) minmax(0, 1.05fr);
+    gap: 16px;
+  }
+  .app-shell.work-app
+    .workspace-content:has(.request-list-panel)
+    > .request-list-panel {
+    padding: 16px;
+  }
+  .app-shell.work-app
+    .workspace-content:not(:has(#request-workspace))
+    .mobile-record-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .app-shell.work-app
+    .workspace-content:not(:has(#request-workspace))
+    .mobile-record-list:has(.mobile-record:only-child) {
+    grid-template-columns: 1fr;
+  }
+  .app-shell.work-app .facility-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 16px;
+    align-items: start;
+  }
+  .app-shell.work-app .facility-side-panel > summary {
+    font-size: 16px;
+  }
+  .app-shell .request-page {
+    max-width: none;
+  }
+  .app-shell .request-page > form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 0 24px;
+    align-items: start;
+  }
+  .app-shell .request-page form > .form-section {
+    grid-column: 1;
+  }
+  .app-shell .request-page form > .submission-review {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    position: sticky;
+    top: 24px;
+    margin-top: 16px;
+  }
+  .app-shell .request-page form > .actions {
+    grid-column: 1 / -1;
+  }
+}
+@media (min-width: 700px) and (max-width: 1250px) {
+  .app-shell .login-role-grid {
+    grid-template-columns: 1fr;
+  }
+  .app-shell .login-role {
+    min-height: 76px;
+  }
+}
+@media (max-width: 699px) {
+  .app-shell.work-app main {
+    padding-top: 12px;
+  }
+  .app-shell.work-app.mobile-app > main {
+    padding-top: 0;
+  }
+  .app-shell.work-app .page-heading {
+    align-items: start;
+  }
+  .app-shell.work-app .page-heading h1 {
+    font-size: 26px;
+  }
+  .app-shell.work-app .page-heading-actions {
+    width: 100%;
+  }
+  .app-shell.work-app .toolbar .design-field {
+    flex-basis: 120px;
+  }
+  .app-shell.work-app .toolbar button {
+    padding: 10px 12px;
+  }
+  .app-shell.work-app .air-operations > .page-heading small {
+    display: block;
+    font-size: 12px;
+  }
+  .app-shell.work-app .air-object-toolbar {
+    grid-template-columns: 1fr;
+  }
+  .app-shell.work-app .air-object-toolbar .air-selector {
+    grid-column: auto;
+  }
+  .app-shell .public-workflow ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .app-shell .request-page form > .actions > button[type="submit"] {
+    width: 100%;
+  }
+  .app-shell .hero-copy h1 {
+    font-size: 32px;
+  }
+}
+.app-shell.work-app .facility-map-area {
+  display: flex;
+  flex-direction: column;
+}
+.app-shell.work-app .facility-map-area > .map {
+  order: -1;
+  margin-top: 0;
+}
+.app-shell.work-app .facility-selection {
+  padding: 16px;
+  background: #e7f5f4;
+  border-radius: 16px;
+  margin-bottom: 16px;
+}
+.app-shell.work-app .facility-selection h3 {
+  margin-top: 8px;
+}
+.app-shell.work-app.coordination-app > main {
+  padding-top: 0;
+}
+.app-shell.work-app .air-tabs {
+  gap: 8px;
+}
+.app-shell.work-app .air-tabs > a {
+  padding: 8px 12px;
+  min-height: 44px;
+}
+.app-shell.work-app .air-object-toolbar .air-selector {
+  font-size: 12px;
+  gap: 4px;
+}
+.app-shell.work-app .air-object-toolbar {
+  align-items: center;
+}
+.app-shell.work-app .air-map-card > .air-map-heading h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.app-shell.work-app .air-map-card > .air-map-heading {
+  margin-bottom: 8px;
+  min-height: 24px;
+}
+.app-shell.work-app .air-map-card > .air-map-heading .badge {
+  padding: 2px 8px;
+}
+.app-shell .desktop-runtime {
+  color: #b9e8e4;
+  font-size: 12px;
+}
+@media (min-width: 1100px) {
+  .app-shell.work-app .air-object-toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .app-shell.work-app .air-tabs {
+    margin-bottom: 4px;
+  }
+}
+@media (min-width: 1100px) {
+  .app-shell.work-app .air-object-toolbar .air-selector {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+  }
+}
+@media (min-width: 1100px) and (max-height: 800px) {
+  .app-shell.demo-login-app .demo-login-shell {
+    padding-top: 24px;
+    padding-bottom: 48px;
+  }
+  .app-shell .login-role {
+    min-height: 88px;
+  }
+  .app-shell .login-intro h1 {
+    font-size: 40px;
+  }
+  .app-shell .login-intro-copy {
+    margin-top: 24px;
+  }
+}
+.app-shell.work-app .air-map-card > .air-map-heading {
+  margin-bottom: 0;
+}
+.app-shell .async-indicator-inline {
+  position: absolute;
+  width: 1px;
+  height: 1px !important;
+  min-height: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.app-shell .page-heading-actions button[aria-label="Refresh"] {
+  min-width: 142px;
+}
+@media (min-width: 1100px) {
+  .app-shell.work-app .toolbar .design-field {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+}

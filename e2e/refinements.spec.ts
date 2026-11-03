@@ -13,6 +13,10 @@ async function login(page: Page) {
     .getByRole("complementary")
     .getByRole("link", { name: "Permohonan", exact: true })
     .click();
+  await page
+    .getByRole("button", { name: /^Lihat detail/ })
+    .first()
+    .click();
 }
 const form = (page: Page, title: string) =>
   page.locator("details").filter({
@@ -40,6 +44,10 @@ test("drafts are isolated by form and survive navigation without replacing other
   await page
     .getByRole("complementary")
     .getByRole("link", { name: "Permohonan", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: /^Lihat detail/ })
+    .first()
     .click();
   await med.locator("summary").click();
   await med.getByRole("button", { name: "Muat draft", exact: true }).click();

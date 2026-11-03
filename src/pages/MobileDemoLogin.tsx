@@ -53,7 +53,7 @@ export default function MobileDemoLogin({
             <strong>
               COLIBRI <span>MED</span>
             </strong>
-            <p>COLIBRI Air Medical</p>
+            <p>Koordinasi Medis Udara</p>
           </div>
         </div>
         <div className="login-meta">

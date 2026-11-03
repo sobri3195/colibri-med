@@ -2,8 +2,10 @@ import MapControls from "./MapControls";
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-type Point = {
+export type Point = {
   name: string;
+  status?: string;
+  summary?: string;
   lat: number;
   lng: number;
   kind?: "facility" | "request";
@@ -12,16 +14,20 @@ const empty: Point[] = [];
 export default function LocationMap({
   locations = empty,
   onPick,
+  onSelect,
   selected,
 }: {
   locations?: Point[];
   onPick?: (lat: number, lng: number) => void;
+  onSelect?: (point: Point) => void;
   selected?: [number, number];
 }) {
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerLayer = useRef<L.LayerGroup | null>(null);
   const selectedMarker = useRef<L.CircleMarker | null>(null);
+  const selectRef = useRef(onSelect);
+  selectRef.current = onSelect;
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
   const [failed, setFailed] = useState(false);
@@ -85,6 +91,7 @@ export default function LocationMap({
         )
         .addTo(layer);
       marker.on("click", () => {
+        selectRef.current?.(p);
         active.current?.getElement()?.classList.remove("is-selected");
         active.current?.setZIndexOffset(0);
         active.current = marker;

@@ -55,7 +55,7 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
   const demoLogin = pathname === "/mobile/login" && mode === "demo";
   const { shellRef, navRef } = useNavigationClearance();
   const isChild =
-    pathname.startsWith("/mobile/operasi") ||
+    (pathname.startsWith("/mobile/operasi") && !!context) ||
     pathname === "/mobile/tentang" ||
     pathname === "/mobile/permohonan";
   const backTo =
@@ -99,6 +99,34 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
                 <small>KOORDINASI MEDIS UDARA</small>
               </div>
             </Link>
+            <div
+              className={
+                connection.online
+                  ? "mobile-connection"
+                  : "mobile-connection offline"
+              }
+              role="status"
+            >
+              <span>
+                {connection.online ? "Perangkat online" : "Perangkat offline"}
+              </span>
+              <span className="mode-chip">
+                {mode === "demo" ? "Mode demo" : "Mode connected"}
+              </span>
+              {!!connection.pending && (
+                <Link
+                  to={
+                    actor?.role === "Viewer pimpinan"
+                      ? "/pimpinan"
+                      : actor
+                        ? "/mobile/operasi/outbox" + context
+                        : "/mobile/permohonan"
+                  }
+                >
+                  {connection.pending} operasi tertunda
+                </Link>
+              )}
+            </div>{" "}
             <Link
               className="mobile-profile"
               to="/mobile/akun"
@@ -108,34 +136,6 @@ export function MobileLayout({ actor }: { actor: Actor | null }) {
               <UserRound size={21} />
             </Link>
           </header>
-          <div
-            className={
-              connection.online
-                ? "mobile-connection"
-                : "mobile-connection offline"
-            }
-            role="status"
-          >
-            <span>
-              {connection.online ? "Perangkat online" : "Perangkat offline"}
-            </span>
-            <span className="mode-chip">
-              {mode === "demo" ? "Mode demo" : "Mode connected"}
-            </span>
-            {!!connection.pending && (
-              <Link
-                to={
-                  actor?.role === "Viewer pimpinan"
-                    ? "/pimpinan"
-                    : actor
-                      ? "/mobile/operasi/outbox" + context
-                      : "/mobile/permohonan"
-                }
-              >
-                {connection.pending} operasi tertunda
-              </Link>
-            )}
-          </div>
         </>
       )}
       {isChild && (

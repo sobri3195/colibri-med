@@ -33,7 +33,7 @@ test("queued mobile catalogue forms cannot be submitted twice and outbox resumes
 });
 const detail = (page: Page, title: string) =>
   page.locator("details").filter({
-    has: page.locator("summary", {
+    has: page.locator(":scope > summary", {
       hasText: new RegExp(
         "^" + title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$",
       ),
@@ -271,6 +271,7 @@ test("mobile facility and resource management updates the map directory and read
 }) => {
   await login(page);
   await nav(page).getByRole("link", { name: "Peta", exact: true }).click();
+  await page.locator(".facility-side-panel > summary").click();
   const manager = detail(page, "Kelola fasilitas sintetis (Administrator)");
   await manager.locator("summary").click();
   await manager.getByLabel("Nama sintetis").fill("Fasilitas Mobile Baru");
