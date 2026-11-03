@@ -26,9 +26,11 @@ test("index demo admin opens monitoring and local playback never changes stored 
   await page.getByRole("button", { name: "Reset ke posisi laporan" }).click();
   await expect(position).toContainText("Posisi laporan: -6.24000, 106.87000");
   await expect(
-    page.getByText(
-      "Briefing awak sintetis dicatat untuk latihan koordinasi. Bukan laporan penerbangan nyata.",
-    ),
+    page
+      .locator(".aircraft-report-list")
+      .getByText(
+        "Briefing awak sintetis dicatat untuk latihan koordinasi. Bukan laporan penerbangan nyata.",
+      ),
   ).toBeVisible();
   await expect(
     page.getByText(
