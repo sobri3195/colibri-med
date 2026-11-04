@@ -87,8 +87,9 @@ test("mobile protected destinations return after login and account exposes all m
     nav.getByRole("link", { name: "Permohonan", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await nav.getByRole("link", { name: "Peta", exact: true }).click();
+  await page.locator(".facility-side-panel > summary").click();
   await expect(
-    page.getByRole("heading", { name: "Daftar lokasi sintetis" }),
+    page.locator(".facility-side-panel .mobile-record").first(),
   ).toBeVisible();
   await expect(
     nav.getByRole("link", { name: "Peta", exact: true }),

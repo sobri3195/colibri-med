@@ -36,7 +36,7 @@ test("demo workflow through medical review, flight approval, mission, handover a
       .getByText("PROTOTIPE SIMULASI — DATA SINTETIS", { exact: false })
       .first(),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Masuk ruang koordinasi" }).click();
+  await page.getByRole("link", { name: "Masuk petugas" }).click();
   await page
     .getByRole("radio", { name: "Administrator", exact: false })
     .check();
@@ -50,6 +50,10 @@ test("demo workflow through medical review, flight approval, mission, handover a
   await page
     .getByRole("complementary")
     .getByRole("link", { name: "Permohonan", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: /^Lihat detail/ })
+    .first()
     .click();
   for (const name of [
     "Permohonan → Diterima Operator",
@@ -169,6 +173,10 @@ test("offline outbox retry and actor isolation", async ({ page, context }) => {
   await page
     .getByRole("complementary")
     .getByRole("link", { name: "Permohonan", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: /^Lihat detail/ })
+    .first()
     .click();
   await expect(
     page.getByRole("heading", { name: "Ruang kerja permohonan" }),

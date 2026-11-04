@@ -35,7 +35,18 @@ import "./mobile-experience.css";
 import "./coordination-polish.css";
 import "./air-medical.css";
 import "./air-coordination.css";
+import "./compact-layout.css";
 function App() {
+  const [deviceOnline, setDeviceOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const update = () => setDeviceOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
   const [initialDemo] = useState(() =>
     mode === "demo" ? readDemoSession() : null,
   );
@@ -127,10 +138,14 @@ function App() {
     );
     return () => clearTimeout(timer);
   }, [actor, navigate, expiresAt]);
+  const workingPage =
+    (/^\/(internal|admin)(?:\/|$)/.test(location.pathname) &&
+      !location.pathname.endsWith("login")) ||
+    /^\/mobile\/(operasi|misi|peta|permohonan)(?:\/|$)/.test(location.pathname);
   return (
     <div
       className={
-        isLeadership
+        (isLeadership
           ? "app-shell mobile-app coordination-app leadership-app"
           : isMobile
             ? "app-shell mobile-app coordination-app" +
@@ -138,7 +153,7 @@ function App() {
               mode === "demo"
                 ? " demo-login-app"
                 : "")
-            : "app-shell"
+            : "app-shell") + (workingPage ? " work-app" : "")
       }
     >
       <div className="simulation">
@@ -151,10 +166,16 @@ function App() {
             <BrandMark />
             <div>
               COLIBRI <b>MED</b>
-              <small>KOORDINASI EVAKUASI MEDIS UDARA</small>
+              <small>Koordinasi Medis Udara</small>
             </div>
           </Link>
           <nav>
+            {workingPage && (
+              <span className="desktop-runtime" role="status">
+                {mode === "demo" ? "Demo · Data sintetis" : "Connected"} ·
+                Perangkat {deviceOnline ? "online" : "offline"}
+              </span>
+            )}
             <Link to="/tentang">Tentang & FAQ</Link>
             <Link to="/permohonan">Permohonan</Link>
             {actor ? (

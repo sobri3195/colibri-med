@@ -37,43 +37,43 @@ export function Home({
     <>
       <section className="hero air-home-hero">
         <div className="hero-copy">
-          <div className="eyebrow">COLIBRI AIR MEDICAL</div>
+          <div className="eyebrow">COLIBRI MED</div>
           <p className="hero-greeting">
             {actor
               ? `Selamat datang, ${actor.name} · ${actor.role}`
               : "Ruang koordinasi medis udara"}
           </p>
-          <h1>Koordinasi medis udara</h1>
+          <h1>
+            Koordinasi Medis
+            <br />
+            Udara
+          </h1>
           <p>
             Hubungkan permohonan, kesiapan tim, dan setiap tahap misi dalam satu
             ruang kerja.
           </p>
-          <Link
-            className="button"
-            to={
-              actor
-                ? actor.role === "Viewer pimpinan"
-                  ? "/pimpinan"
-                  : "/internal/permohonan"
-                : "/permohonan"
-            }
-          >
-            {actor ? "Buka ruang koordinasi" : "Buat permohonan simulasi"}{" "}
-            <ArrowRight size={18} />
-          </Link>
+          <div className="hero-actions">
+            <Link className="button" to="/mobile">
+              Coba simulasi <ArrowRight size={18} />
+            </Link>
+            <Link className="button secondary" to="/login">
+              Masuk petugas
+            </Link>
+          </div>
           <small>Data sintetis · Bukan layanan darurat resmi</small>
         </div>
         <FlightAccent />
       </section>
+      <h2 className="explore-title">Jelajahi demo</h2>
       <nav className="home-links" aria-label="Akses cepat beranda">
         <Link to="/login">
           <ClipboardList size={20} />
-          Masuk ruang koordinasi
+          Ruang koordinasi petugas
           <ArrowRight size={16} />
         </Link>
-        <Link to="/mobile">
+        <Link to="/admin">
           <Plane size={20} />
-          Versi mobile
+          Pemantauan helikopter
           <ArrowRight size={16} />
         </Link>
         <Link to="/pimpinan">
@@ -113,32 +113,26 @@ export function Home({
           <Link to="/admin/laporan">Lihat laporan helikopter</Link>
         </div>
       </section>
-      <div className="grid three">
-        {[
-          [
-            ClipboardList,
-            "Alur yang tercatat",
-            "Setiap tahap dicatat untuk membantu koordinasi antar peran.",
-          ],
-          [
-            ShieldCheck,
-            "Keputusan oleh petugas",
-            "Penilaian medis dan tinjauan penerbangan tetap terpisah.",
-          ],
-          [
-            Plane,
-            "Simulasi menyeluruh",
-            "Data contoh untuk menguji kesiapan alur operasional.",
-          ],
-        ].map(([Icon, title, text]: any) => (
-          <article className="card" key={title}>
-            <Icon color="#0d9488" />
-            <h3>{title}</h3>
-            <p>{text}</p>
-          </article>
-        ))}
-      </div>
-      <Info />
+      <section className="card public-workflow">
+        <h2>Alur simulasi</h2>
+        <ol>
+          {[
+            "Catat permohonan",
+            "Verifikasi dan koordinasikan",
+            "Tinjau medis dan penerbangan secara terpisah",
+            "Tetapkan tim dan catat serah terima",
+          ].map((step, i) => (
+            <li key={step}>
+              <span>{String(i + 1).padStart(2, "0")}</span>
+              {step}
+            </li>
+          ))}
+        </ol>
+        <p>
+          Data sintetis untuk latihan koordinasi. Bukan layanan darurat resmi.
+        </p>
+        <Link to="/tentang">Tentang prototipe dan batas layanan →</Link>
+      </section>
     </>
   );
 }

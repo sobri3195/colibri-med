@@ -54,6 +54,10 @@ test("admin records and reads crew reports, retains reported coordinates after r
     .filter({ hasText: "SIM-HELI-02" })
     .getAttribute("value");
   await selector.selectOption(second!);
+  await expect(page.locator(".aircraft-report-form")).toHaveAttribute(
+    "aria-label",
+    "Pencatatan laporan SIM-HELI-02",
+  );
   await page
     .getByRole("combobox", { name: "Jenis laporan", exact: true })
     .selectOption("Posisi");

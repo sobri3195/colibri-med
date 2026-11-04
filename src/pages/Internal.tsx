@@ -48,6 +48,7 @@ import {
   haversine,
 } from "../lib/domain";
 import AsyncState from "../components/AsyncState";
+import type { Point } from "../components/LocationMap";
 import LocationMap from "../components/LocationMap";
 import { usePreferences } from "../features/usePreferences";
 import CatalogueManager from "../features/CatalogueManager";
@@ -83,6 +84,7 @@ export default function Internal({
     else next.delete("request");
     setParams(next, { replace: true });
   };
+  const [locationSelected, setLocationSelected] = useState<Point | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("");
   const [view, setView] = useState("table");
@@ -184,11 +186,7 @@ export default function Internal({
       compact={compact || section === "permohonan" || section === "misi"}
       requests={requests}
       selectedId={
-        compact && !selected
-          ? undefined
-          : section === "misi"
-            ? mission?.id
-            : request?.id
+        !selected ? undefined : section === "misi" ? mission?.id : request?.id
       }
       onOpen={onOpen}
     />
@@ -245,20 +243,33 @@ export default function Internal({
       )}
       <div className="workspace-content">
         <PageHeading
-          eyebrow="COLIBRI AIR MEDICAL / KOORDINASI"
+          eyebrow="COLIBRI MED / KOORDINASI"
           title={
             section
               ? (tabs.find((t) => t[0] === section)?.[1] ?? "Ringkasan")
               : "Ringkasan koordinasi"
           }
           action={
-            <button
-              className="secondary"
-              disabled={poll.loading}
-              onClick={() => void poll.refresh()}
-            >
-              <RefreshCw size={16} /> Refresh
-            </button>
+            <div className="page-heading-actions">
+              {section === "permohonan" &&
+                canAction(actor, "requests.create") && (
+                  <Link
+                    className="button"
+                    to={compact ? "/mobile/permohonan" : "/permohonan"}
+                  >
+                    Buat permohonan baru
+                  </Link>
+                )}
+              <button
+                className="secondary"
+                disabled={poll.loading}
+                aria-label="Refresh"
+                onClick={() => void poll.refresh()}
+              >
+                <RefreshCw size={16} />{" "}
+                {poll.loading ? "Memperbarui…" : "Refresh"}
+              </button>
+            </div>
           }
         >
           <small>
@@ -268,7 +279,7 @@ export default function Internal({
             · polling {interval / 1000} detik
           </small>
         </PageHeading>
-        <AsyncState {...poll} reload={() => void poll.refresh()} />
+        <AsyncState inline {...poll} reload={() => void poll.refresh()} />
         {busy && (
           <p role="status">
             Menyimpan perubahan… Tunggu konfirmasi sebelum menutup halaman.
@@ -361,11 +372,6 @@ export default function Internal({
         {section === "permohonan" && (
           <section className="card request-list-panel">
             <h2>Daftar permohonan</h2>
-            {compact && (
-              <Link className="button" to="/mobile/permohonan">
-                Buat permohonan baru
-              </Link>
-            )}
             {rows(requests, (r) => openRequest(r.id))}
           </section>
         )}
@@ -442,7 +448,7 @@ export default function Internal({
           </section>
         )}
         {["permohonan", "misi", "penilaian"].includes(section) &&
-          (!compact || !!selected || section === "penilaian") && (
+          (!!selected || section === "penilaian") && (
             <section className="card" id="request-workspace">
               <div className="detail-heading">
                 <h2>
@@ -450,7 +456,7 @@ export default function Internal({
                     ? "Detail misi & permohonan terkait"
                     : "Ruang kerja permohonan"}
                 </h2>
-                {compact && selected && (
+                {selected && (
                   <button className="secondary" onClick={() => setSelected("")}>
                     Tutup detail
                   </button>
@@ -800,59 +806,96 @@ export default function Internal({
               </section>
             ))}
         {section === "fasilitas" && (
-          <section className="card">
-            <LocationMap
-              locations={[
-                ...(data.Facilities ?? []),
-                ...requests.filter(
-                  (r) =>
-                    r.lat !== "" &&
-                    r.lng !== "" &&
-                    Number.isFinite(Number(r.lat)) &&
-                    Number.isFinite(Number(r.lng)),
-                ),
-              ]
-                .filter(
-                  (r) =>
-                    (!filter || r.status === filter) &&
-                    JSON.stringify(r)
-                      .toLowerCase()
-                      .includes(search.toLowerCase()),
-                )
-                .map((r) => ({
-                  name: String(r.name ?? r.facility ?? "Lokasi permohonan"),
-                  kind: requests.some((request) => request.id === r.id)
-                    ? ("request" as const)
-                    : ("facility" as const),
-                  lat: Number(r.lat),
-                  lng: Number(r.lng),
-                }))}
-            />
-            <h2>Daftar lokasi sintetis</h2>
-            {rows(data.Facilities ?? [])}
-            {actor.role === "Administrator" && (
-              <CatalogueManager
-                kind="facilities"
-                records={data.Facilities ?? []}
-                busy={busy}
-                act={act}
+          <section className="card facility-workspace">
+            <div className="facility-map-area">
+              <LocationMap
+                onSelect={setLocationSelected}
+                selected={
+                  locationSelected
+                    ? [locationSelected.lat, locationSelected.lng]
+                    : undefined
+                }
+                locations={[
+                  ...(data.Facilities ?? []),
+                  ...requests.filter(
+                    (r) =>
+                      r.lat !== "" &&
+                      r.lng !== "" &&
+                      Number.isFinite(Number(r.lat)) &&
+                      Number.isFinite(Number(r.lng)),
+                  ),
+                ]
+                  .filter(
+                    (r) =>
+                      (!filter || r.status === filter) &&
+                      JSON.stringify(r)
+                        .toLowerCase()
+                        .includes(search.toLowerCase()),
+                  )
+                  .map((r) => ({
+                    name: String(r.name ?? r.facility ?? "Lokasi permohonan"),
+                    status: r.status,
+                    summary: String(
+                      r.location ?? r.address ?? "Lokasi sintetis tersimpan",
+                    ),
+                    kind: requests.some((request) => request.id === r.id)
+                      ? ("request" as const)
+                      : ("facility" as const),
+                    lat: Number(r.lat),
+                    lng: Number(r.lng),
+                  }))}
               />
-            )}
-            <h3>Lokasi permohonan sintetis</h3>
-            {rows(requests, (r) => openRequest(r.id))}
-            {request &&
-              request.lat !== "" &&
-              request.lng !== "" &&
-              (data.Facilities ?? []).map((f) => (
-                <p key={f.id}>
-                  {String(f.name)}: Jarak garis lurus{" "}
-                  {haversine(
-                    [Number(request.lat), Number(request.lng)],
-                    [Number(f.lat), Number(f.lng)],
-                  ).toFixed(1)}{" "}
-                  km. Bukan rute penerbangan atau ETA.
+            </div>
+            <details className="facility-side-panel" open={!compact}>
+              <summary>Daftar lokasi sintetis</summary>
+              <h2>Daftar lokasi sintetis</h2>
+              {locationSelected ? (
+                <section className="facility-selection">
+                  <small>
+                    {locationSelected.kind === "request"
+                      ? "Lokasi permohonan"
+                      : "Fasilitas kesehatan"}
+                  </small>
+                  <h3>{locationSelected.name}</h3>
+                  {locationSelected.status && (
+                    <StatusBadge status={locationSelected.status} />
+                  )}
+                  <p>{locationSelected.summary}</p>
+                  <small>
+                    {locationSelected.lat.toFixed(5)},{" "}
+                    {locationSelected.lng.toFixed(5)} · Data sintetis
+                  </small>
+                </section>
+              ) : (
+                <p className="form-help">
+                  Pilih marker untuk melihat ringkasan lokasi.
                 </p>
-              ))}
+              )}
+              {rows(data.Facilities ?? [])}
+              {actor.role === "Administrator" && (
+                <CatalogueManager
+                  kind="facilities"
+                  records={data.Facilities ?? []}
+                  busy={busy}
+                  act={act}
+                />
+              )}
+              <h3>Lokasi permohonan sintetis</h3>
+              {rows(requests, (r) => openRequest(r.id))}
+              {request &&
+                request.lat !== "" &&
+                request.lng !== "" &&
+                (data.Facilities ?? []).map((f) => (
+                  <p key={f.id}>
+                    {String(f.name)}: Jarak garis lurus{" "}
+                    {haversine(
+                      [Number(request.lat), Number(request.lng)],
+                      [Number(f.lat), Number(f.lng)],
+                    ).toFixed(1)}{" "}
+                    km. Bukan rute penerbangan atau ETA.
+                  </p>
+                ))}
+            </details>
           </section>
         )}
         {section === "sumber-daya" && (
